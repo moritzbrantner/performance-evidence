@@ -1,0 +1,5 @@
+[project]
+name = "performance-evidence"
+version = "0.1.0"
+description = "Language- and profiler-neutral computational-cost evidence contracts."
+requires-python = ">=3.11"

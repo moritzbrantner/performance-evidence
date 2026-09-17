@@ -2,28 +2,36 @@ name: Validate
 
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
+  foundation:
+    name: Repository foundation
+    uses: moritzbrantner/reusable-workflows/.github/workflows/coding-tooling-validation.yml@f6748408a173bab2962e5e51b5418e5c3244e348
+    with:
+      operation: foundation
+      install_mode: none
+      report_path: .artifacts/coding-tooling/foundation.json
+
+  findings:
+    name: Deterministic findings
+    uses: moritzbrantner/reusable-workflows/.github/workflows/coding-tooling-validation.yml@f6748408a173bab2962e5e51b5418e5c3244e348
+    with:
+      operation: findings
+      install_mode: none
+      report_path: .artifacts/coding-tooling/findings.json
+
   contract:
-    name: Performance evidence contract
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
-
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.13"
-          cache: pip
-          cache-dependency-path: requirements-dev.txt
-
-      - name: Install validation dependency
-        run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
-
-      - name: Validate schema and fixtures
-        run: python scripts/validate_schema.py
+    name: Repository validation
+    uses: moritzbrantner/reusable-workflows/.github/workflows/coding-tooling-validation.yml@f6748408a173bab2962e5e51b5418e5c3244e348
+    with:
+      operation: run
+      tier: fast
+      report_path: .artifacts/coding-tooling/fast.json
+      evidence_path: .artifacts/performance-evidence/contract-validation.json
+      artifact_retention_days: 14

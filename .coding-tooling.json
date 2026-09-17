@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "profile": "repository-foundation-v1",
+  "tiers": {
+    "fast": ["test:unit", "benchmark:smoke"],
+    "full": ["test:unit", "benchmark:smoke"]
+  },
+  "requiredCapabilities": ["test:unit", "benchmark:smoke"],
+  "capabilityCommands": {
+    ".": {
+      "test:unit": ["python3", "scripts/validate_schema.py"],
+      "benchmark:smoke": [
+        "python3",
+        "scripts/validate_schema.py",
+        "--evidence",
+        ".artifacts/performance-evidence/contract-validation.json"
+      ]
+    }
+  }
+}
