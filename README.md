@@ -32,4 +32,15 @@ Examples include:
 - contacts tested / contacts produced;
 - snapshots produced / explicitly requested snapshots.
 
+## Contract
+
+The first implementation slice establishes the versioned JSON contract in [`schema/performance-evidence.schema.json`](schema/performance-evidence.schema.json). See [`docs/contract.md`](docs/contract.md) for classification, provenance, measurement identity, artifact, and extension rules.
+
+Validate it locally with:
+
+```sh
+python -m pip install -r requirements-dev.txt
+python scripts/validate_schema.py
+```
+
 See [ROADMAP.md](ROADMAP.md) for the planned slices.
