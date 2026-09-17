@@ -8,7 +8,7 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator, FormatChecker
 
-from convert_agent_loop_efficiency import convert_report
+from convert_agent_loop_efficiency import convert_report, repository_uri
 from validate_schema import validation_errors
 
 
@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_DIR = ROOT / "fixtures" / "agent-loop-efficiency"
 SCHEMA_PATH = ROOT / "schema" / "performance-evidence.schema.json"
 EXPECTED_NAME = "018f5d43-4d1c-7fd5-aed5-d451fd71c110.attempt-1.performance-evidence.json"
+EXPECTED_REPOSITORY = "https://github.com/moritzbrantner/physics-engine"
 
 
 def load_json(path: Path) -> dict:
@@ -26,8 +27,25 @@ def load_json(path: Path) -> dict:
     return value
 
 
+def validate_repository_uris() -> None:
+    for repository in (
+        "moritzbrantner/physics-engine",
+        "https://github.com/moritzbrantner/physics-engine.git",
+        "http://github.com/moritzbrantner/physics-engine.git",
+        "git://github.com/moritzbrantner/physics-engine.git",
+        "git@github.com:moritzbrantner/physics-engine.git",
+        "ssh://git@github.com/moritzbrantner/physics-engine.git",
+    ):
+        actual = repository_uri(repository)
+        if actual != EXPECTED_REPOSITORY:
+            raise ValueError(
+                f"repository URI normalization mismatch for {repository!r}: {actual!r}"
+            )
+
+
 def main() -> int:
     try:
+        validate_repository_uris()
         report = load_json(FIXTURE_DIR / "report.json")
         expected = load_json(FIXTURE_DIR / "expected.json")
         converted = convert_report(report, source_dirty=False)

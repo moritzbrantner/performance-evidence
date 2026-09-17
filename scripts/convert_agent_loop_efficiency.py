@@ -31,14 +31,35 @@ def sha256_value(value: Any) -> str:
     return "sha256:" + hashlib.sha256(canonical_json(value)).hexdigest()
 
 
-def repository_uri(repository: Any) -> str | None:
-    if not isinstance(repository, str) or not repository:
+def github_repository_uri(path: str) -> str | None:
+    path = path.strip("/")
+    if path.endswith(".git"):
+        path = path[:-4]
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", path):
         return None
-    if repository.startswith("https://") or repository.startswith("http://"):
+    return f"https://github.com/{path}"
+
+
+def repository_uri(repository: Any) -> str | None:
+    if not isinstance(repository, str):
+        return None
+    repository = repository.strip()
+    if not repository:
+        return None
+
+    for prefix in (
+        "git@github.com:",
+        "ssh://git@github.com/",
+        "https://github.com/",
+        "http://github.com/",
+        "git://github.com/",
+    ):
+        if repository.startswith(prefix):
+            return github_repository_uri(repository[len(prefix) :])
+
+    if repository.startswith(("https://", "http://", "ssh://")):
         return repository
-    if re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
-        return f"https://github.com/{repository}"
-    return None
+    return github_repository_uri(repository)
 
 
 def measurement(
