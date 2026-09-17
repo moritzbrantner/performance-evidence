@@ -109,6 +109,7 @@ def convert_attempt(attempt: dict[str, Any], source_dirty: bool) -> dict[str, An
     baseline_sha = attempt.get("baselineSha")
     task_id = attempt.get("taskId")
     run_id = attempt.get("runId")
+    attempt_id = attempt.get("attemptId")
     project_id = attempt.get("projectId")
     provider = attempt.get("provider")
     attempt_number = attempt.get("attemptNumber")
@@ -124,6 +125,8 @@ def convert_attempt(attempt: dict[str, Any], source_dirty: bool) -> dict[str, An
     missing = [name for name, value in required.items() if value is None]
     if missing:
         raise ValueError("attempt is missing required fields: " + ", ".join(missing))
+    if attempt_id is not None and (not isinstance(attempt_id, str) or not attempt_id):
+        raise ValueError("attemptId must be a non-empty string when present")
 
     useful_work = [
         measurement(
@@ -192,6 +195,8 @@ def convert_attempt(attempt: dict[str, Any], source_dirty: bool) -> dict[str, An
         "attempt_number": attempt_number,
         "resumed_provider_session": bool(attempt.get("resumedProviderSession", False)),
     }
+    if attempt_id is not None:
+        extension["attempt_id"] = attempt_id
     for source_key, target_key in (
         ("model", "model"),
         ("outcome", "outcome"),

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import sys
 from pathlib import Path
@@ -43,6 +44,29 @@ def validate_repository_uris() -> None:
             )
 
 
+def validate_attempt_identity_compatibility(report: dict) -> None:
+    legacy_report = copy.deepcopy(report)
+    legacy_attempt = legacy_report["attempts"][0]
+    expected_run_id = legacy_attempt["runId"]
+    legacy_attempt.pop("attemptId")
+    legacy_converted = convert_report(legacy_report, source_dirty=False)
+    legacy_extension = legacy_converted[0][1]["extensions"]["agent.execution"]
+    if "attempt_id" in legacy_extension:
+        raise ValueError("historical report without attemptId unexpectedly emitted attempt_id")
+    if legacy_extension.get("run_id") != expected_run_id:
+        raise ValueError("historical report lost run correlation while omitting attemptId")
+
+    invalid_report = copy.deepcopy(report)
+    invalid_report["attempts"][0]["attemptId"] = ""
+    try:
+        convert_report(invalid_report, source_dirty=False)
+    except ValueError as error:
+        if "attemptId" not in str(error):
+            raise
+    else:
+        raise ValueError("empty attemptId was accepted")
+
+
 def main() -> int:
     try:
         validate_repository_uris()
@@ -63,6 +87,8 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 1
+
+        validate_attempt_identity_compatibility(report)
 
         schema = load_json(SCHEMA_PATH)
         validator = Draft202012Validator(schema, format_checker=FormatChecker())
