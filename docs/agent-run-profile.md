@@ -14,7 +14,9 @@
 
 The profile maps one orchestrator attempt to one canonical evidence record. This keeps comparison semantics precise: a provider/model switch, resumed session, retry, or escalation remains a distinct execution attempt rather than being silently averaged together.
 
-The stable scenario ID is `agent/implementation-attempt`. Workload identity should represent the logical task plus project and baseline revision. Run IDs, attempt numbers, provider/model choices, timing, cost, and usage must not contribute to the workload hash; otherwise equivalent attempts would become incomparable merely because the execution strategy changed.
+The stable scenario ID is `agent/implementation-attempt`. Workload identity should represent the logical task plus project and baseline revision. Run IDs, attempt IDs, attempt numbers, provider/model choices, timing, cost, and usage must not contribute to the workload hash; otherwise equivalent attempts would become incomparable merely because the execution strategy changed.
+
+`runId` and `attemptId` are correlation identities, not workload identities. When the source execution ledger supplies a stable `attemptId`, adapters preserve it in `extensions["agent.execution"]` alongside `run_id`. Historical reports that predate `attemptId` remain valid and continue to use the existing run/attempt-number metadata; adapters must not synthesize a stable attempt ID that the producer did not provide.
 
 ## Measurement classification
 
@@ -30,14 +32,14 @@ Missing telemetry remains missing. Adapters must not coerce unavailable token, c
 
 ## Mapping from agent-loop-orchestrator
 
-The current `agent-loop-efficiency` report already exposes the required raw fields:
+The current `agent-loop-efficiency` report exposes the required raw fields:
 
 | Performance Evidence | Orchestrator field |
 | --- | --- |
 | source revision | `baselineSha` |
 | candidate output | `candidateSha` |
 | provider/model | `provider`, `model` |
-| attempt identity | `taskId`, `runId`, `attemptNumber` |
+| attempt identity | `taskId`, `runId`, optional `attemptId`, `attemptNumber` |
 | execution duration | `executionMs` |
 | deterministic time-to-green | `deterministicTimeToGreenMs` |
 | input/output/cached tokens | `usage.inputTokens`, `usage.outputTokens`, `usage.cachedInputTokens` |
@@ -53,7 +55,7 @@ An adapter must only emit `source.dirty = false` when the producing execution la
 
 Execution metadata that is important for routing analysis but is not itself a numeric performance measurement belongs in `extensions["agent.execution"]`:
 
-- task/run/project identifiers;
+- task/run/project identifiers and, when supplied by the execution authority, the stable attempt identifier;
 - provider and model;
 - attempt number and outcome;
 - failure/escalation reason;
@@ -62,13 +64,20 @@ Execution metadata that is important for routing analysis but is not itself a nu
 
 Provider session IDs are intentionally excluded from portable artifacts. They are operational ledger identifiers and may be sensitive or reusable; they are not required for performance comparison.
 
+## Cross-component correlation
+
+When the immutable Performance Evidence artifact crosses an independently owned component boundary, `agent-contracts` remains the neutral envelope authority. An `agent.evidence/v1` reference may carry the same `runId` and `attemptId` plus repository/source/candidate/capability/scenario context. Those fields correlate independently owned receipts; they do not duplicate or override the canonical Performance Evidence payload.
+
+Direct repository and CI use does not require an orchestrator or an evidence envelope. Correlation context is additive at interchange boundaries only.
+
 ## Environment identity
 
 The canonical environment fingerprint should be derived deterministically from semantic execution-environment evidence already produced by the orchestrator. Provider/model may be included when they materially define execution behavior. Raw host names, timestamps, temporary paths, session IDs, credentials, or other ambient state must not affect the fingerprint.
 
 ## Next integration steps
 
-1. Teach `agent-loop-orchestrator` to export each attempt using this profile while retaining its richer efficiency report as the ledger/rollup view.
-2. Let weekly efficiency reporting aggregate canonical attempt evidence by workload, provider/model, escalation stage, and outcome.
-3. Apply Slice 2 comparison semantics to equivalent attempts so routing changes can be evaluated without hiding zero or missing baselines.
-4. Later expose the same immutable artifacts to architecture-review and repository-convergence skills when token/time cost is relevant to choosing or calibrating an execution path.
+1. Preserve the execution ledger's stable attempt identity through `agent-loop-efficiency` and canonical Performance Evidence export.
+2. Propagate the same run/attempt context through coding-harness traces and neutral evidence references without making lower-level tooling orchestration-aware.
+3. Let weekly efficiency reporting aggregate canonical attempt evidence by workload, provider/model, escalation stage, and outcome.
+4. Apply Slice 2 comparison semantics to equivalent attempts so routing changes can be evaluated without hiding zero or missing baselines.
+5. Later expose the same immutable artifacts to architecture-review and repository-convergence skills when token/time cost is relevant to choosing or calibrating an execution path.
