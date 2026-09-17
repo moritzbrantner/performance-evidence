@@ -46,8 +46,8 @@ The machine-readable artifact is authoritative. Markdown reports and GitHub Page
 - [x] Map the profile to the existing `agent-loop-orchestrator` efficiency ledger while preserving orchestration/ledger ownership there.
 - [x] Keep provider session identifiers out of portable artifacts.
 - [x] Add a canonical valid fixture and include profiles in deterministic dogfood validation.
-- [ ] Teach `agent-loop-orchestrator` to export canonical per-attempt Performance Evidence using the profile.
-- [ ] Aggregate canonical attempt evidence in the weekly efficiency rollup without replacing the richer orchestrator ledger view.
+- [x] Teach `agent-loop-orchestrator` to export canonical per-attempt Performance Evidence using the profile.
+- [x] Aggregate canonical attempt evidence in the weekly efficiency rollup without replacing the richer orchestrator ledger view.
 
 ## Slice 2 — Comparison and work amplification
 
