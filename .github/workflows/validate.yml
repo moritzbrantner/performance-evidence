@@ -2,28 +2,58 @@ name: Validate
 
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
+  foundation:
+    name: Repository foundation
+    uses: moritzbrantner/reusable-workflows/.github/workflows/coding-tooling-validation.yml@fd22697af1dfc42e4b8d66e222e1a7c415da2be0
+    with:
+      operation: foundation
+      allow_missing_foundation: true
+      install_mode: none
+      report_path: .artifacts/coding-tooling/foundation.json
+
+  findings:
+    name: Deterministic findings
+    uses: moritzbrantner/reusable-workflows/.github/workflows/coding-tooling-validation.yml@fd22697af1dfc42e4b8d66e222e1a7c415da2be0
+    with:
+      operation: findings
+      install_mode: none
+      report_path: .artifacts/coding-tooling/findings.json
+
   contract:
-    name: Performance evidence contract
+    name: Repository validation
+    uses: moritzbrantner/reusable-workflows/.github/workflows/command-validation.yml@fd22697af1dfc42e4b8d66e222e1a7c415da2be0
+    with:
+      command: python3 scripts/validate_schema.py
+
+  dogfood:
+    name: Performance Evidence dogfood
+    needs: contract
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - name: Set up Python
-        uses: actions/setup-python@v7
+      - name: Prepare declared environment
+        run: bash scripts/codex-environment.sh setup
+
+      - name: Emit canonical dogfood evidence
+        run: >-
+          python3 scripts/validate_schema.py
+          --evidence .artifacts/performance-evidence/contract-validation.json
+
+      - name: Upload dogfood evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          python-version: "3.13"
-          cache: pip
-          cache-dependency-path: requirements-dev.txt
-
-      - name: Install validation dependency
-        run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
-
-      - name: Validate schema and fixtures
-        run: python scripts/validate_schema.py
+          name: performance-evidence-contract-validation-${{ github.sha }}
+          path: .artifacts/performance-evidence/contract-validation.json
+          if-no-files-found: error
+          retention-days: 14
