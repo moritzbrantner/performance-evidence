@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "scenario": {
+    "id": "example/negative-work",
+    "workload": {
+      "id": "negative-work",
+      "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  },
+  "source": {
+    "revision": "0123456789abcdef0123456789abcdef01234567",
+    "dirty": false
+  },
+  "environment": {
+    "fingerprint": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "measurements": {
+    "useful_work": [],
+    "induced_work": [
+      {
+        "name": "memory.allocations",
+        "value": -1,
+        "unit": "count",
+        "measurement_type": "counter"
+      }
+    ],
+    "outcomes": []
+  }
+}
