@@ -29,14 +29,14 @@ The machine-readable artifact is authoritative. Markdown reports and GitHub Page
 
 ## Slice 1 — Canonical evidence contract
 
-- [ ] Define a versioned JSON Schema for `performance-evidence.json`.
-- [ ] Keep the base model language/framework neutral.
-- [ ] Represent counters as typed, unit-bearing measurements rather than a fixed list of profiler-specific fields.
-- [ ] Distinguish useful work, induced work, and outcomes explicitly.
-- [ ] Capture source SHA, workload identity/hash, seed, environment fingerprint, and artifact hashes.
-- [ ] Add valid and invalid fixtures.
-- [ ] Add deterministic validation in CI.
-- [ ] Document extension rules so domain counters remain comparable without centralizing domain semantics here.
+- [x] Define a versioned JSON Schema for `performance-evidence.json`.
+- [x] Keep the base model language/framework neutral.
+- [x] Represent counters as typed, unit-bearing measurements rather than a fixed list of profiler-specific fields.
+- [x] Distinguish useful work, induced work, and outcomes explicitly.
+- [x] Capture source SHA, workload identity/hash, seed, environment fingerprint, and artifact hashes.
+- [x] Add valid and invalid fixtures.
+- [x] Add deterministic validation in CI.
+- [x] Document extension rules so domain counters remain comparable without centralizing domain semantics here.
 
 ## Slice 2 — Comparison and work amplification
 
