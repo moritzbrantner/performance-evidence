@@ -1,0 +1,245 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://moritzbrantner.github.io/performance-evidence/schema/performance-evidence.schema.json",
+  "title": "Performance Evidence",
+  "description": "Portable evidence describing useful work, induced work, and observed outcomes for one reproducible performance scenario.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "scenario",
+    "source",
+    "environment",
+    "measurements"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "scenario": {
+      "$ref": "#/$defs/scenario"
+    },
+    "source": {
+      "$ref": "#/$defs/source"
+    },
+    "environment": {
+      "$ref": "#/$defs/environment"
+    },
+    "measurements": {
+      "$ref": "#/$defs/measurements"
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/artifact"
+      },
+      "uniqueItems": true,
+      "default": []
+    },
+    "baseline": {
+      "$ref": "#/$defs/baseline"
+    },
+    "extensions": {
+      "$ref": "#/$defs/extensions"
+    }
+  },
+  "$defs": {
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "workload"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workload": {
+          "$ref": "#/$defs/workload"
+        }
+      }
+    },
+    "workload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "hash"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "hash": {
+          "$ref": "#/$defs/sha256"
+        },
+        "seed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "dirty"],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "format": "uri"
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Exact source revision used to produce the evidence, normally a full Git commit SHA."
+        },
+        "dirty": {
+          "type": "boolean",
+          "description": "Whether uncommitted source changes were present while collecting evidence."
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fingerprint"],
+      "properties": {
+        "fingerprint": {
+          "$ref": "#/$defs/sha256"
+        },
+        "platform": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "toolchain": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "collector": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "version"],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "measurements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["useful_work", "induced_work", "outcomes"],
+      "properties": {
+        "useful_work": {
+          "$ref": "#/$defs/measurementList"
+        },
+        "induced_work": {
+          "$ref": "#/$defs/measurementList"
+        },
+        "outcomes": {
+          "$ref": "#/$defs/measurementList"
+        }
+      }
+    },
+    "measurementList": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/measurement"
+      }
+    },
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "value", "unit", "measurement_type"],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/identifier"
+        },
+        "value": {
+          "type": "number",
+          "minimum": 0
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1,
+          "description": "A stable unit identifier such as count, byte, instruction, ns, frame, or a domain-defined unit."
+        },
+        "measurement_type": {
+          "enum": ["counter", "gauge", "duration", "size", "rate", "ratio"]
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "path", "sha256"],
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/identifier"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "media_type": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_revision", "evidence_hash"],
+      "properties": {
+        "source_revision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence_hash": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)+$"
+      },
+      "additionalProperties": {
+        "type": "object"
+      },
+      "description": "Namespaced extension objects. Extension keys must use a stable dotted or hyphenated namespace and must not redefine canonical fields."
+    },
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9]*(?:[._/-][a-z0-9]+)*$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}
