@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "scenario": {
+    "id": "example/duplicate-name",
+    "workload": {
+      "id": "duplicate-name",
+      "hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    }
+  },
+  "source": {
+    "revision": "0123456789abcdef0123456789abcdef01234567",
+    "dirty": false
+  },
+  "environment": {
+    "fingerprint": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  },
+  "measurements": {
+    "useful_work": [
+      {
+        "name": "example.items_changed",
+        "value": 4,
+        "unit": "count",
+        "measurement_type": "counter"
+      },
+      {
+        "name": "example.items_changed",
+        "value": 4,
+        "unit": "count",
+        "measurement_type": "counter"
+      }
+    ],
+    "induced_work": [],
+    "outcomes": []
+  }
+}
