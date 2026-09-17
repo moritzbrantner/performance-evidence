@@ -8,7 +8,7 @@
   "requiredCapabilities": ["test:unit", "benchmark:smoke"],
   "capabilityCommands": {
     ".": {
-      "test:unit": ["python3", "scripts/validate_schema.py"],
+      "test:unit": ["python3", "scripts/validate_agent_loop_adapter.py"],
       "benchmark:smoke": [
         "python3",
         "scripts/validate_schema.py",
