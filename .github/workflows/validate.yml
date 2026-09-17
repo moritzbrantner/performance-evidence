@@ -12,7 +12,7 @@ permissions:
 jobs:
   foundation:
     name: Repository foundation
-    uses: moritzbrantner/reusable-workflows/.github/workflows/coding-tooling-validation.yml@648c072367198309ae88263131793f182449bb7c
+    uses: moritzbrantner/reusable-workflows/.github/workflows/coding-tooling-validation.yml@f6748408a173bab2962e5e51b5418e5c3244e348
     with:
       operation: foundation
       install_mode: none
@@ -20,7 +20,7 @@ jobs:
 
   findings:
     name: Deterministic findings
-    uses: moritzbrantner/reusable-workflows/.github/workflows/coding-tooling-validation.yml@648c072367198309ae88263131793f182449bb7c
+    uses: moritzbrantner/reusable-workflows/.github/workflows/coding-tooling-validation.yml@f6748408a173bab2962e5e51b5418e5c3244e348
     with:
       operation: findings
       install_mode: none
@@ -28,31 +28,10 @@ jobs:
 
   contract:
     name: Repository validation
-    uses: moritzbrantner/reusable-workflows/.github/workflows/command-validation.yml@648c072367198309ae88263131793f182449bb7c
+    uses: moritzbrantner/reusable-workflows/.github/workflows/coding-tooling-validation.yml@f6748408a173bab2962e5e51b5418e5c3244e348
     with:
-      command: python3 scripts/validate_schema.py
-
-  dogfood:
-    name: Performance Evidence dogfood
-    needs: contract
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-
-      - name: Prepare declared environment
-        run: bash scripts/codex-environment.sh setup
-
-      - name: Emit canonical dogfood evidence
-        run: >-
-          python3 scripts/validate_schema.py
-          --evidence .artifacts/performance-evidence/contract-validation.json
-
-      - name: Upload dogfood evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: performance-evidence-contract-validation-${{ github.sha }}
-          path: .artifacts/performance-evidence/contract-validation.json
-          if-no-files-found: error
-          retention-days: 14
+      operation: run
+      tier: fast
+      report_path: .artifacts/coding-tooling/fast.json
+      evidence_path: .artifacts/performance-evidence/contract-validation.json
+      artifact_retention_days: 14
