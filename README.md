@@ -43,4 +43,10 @@ python -m pip install -r requirements-dev.txt
 python scripts/validate_schema.py
 ```
 
+## Agent landscape
+
+Performance Evidence remains the canonical computational-cost payload when used by coding agents. Repository capability discovery belongs to `coding-tooling`, hosted execution to `reusable-workflows`, profiling/exploration to `runtime-profiler`, and durable orchestration to `agent-loop-orchestrator`. When evidence crosses an independently owned component boundary, `agent-contracts` may wrap the immutable artifact as an `agent.evidence/v1` reference rather than replacing this schema.
+
+See [`docs/agent-landscape.md`](docs/agent-landscape.md) for the direct repository path, cross-component path, and integration invariants.
+
 See [ROADMAP.md](ROADMAP.md) for the planned slices.
