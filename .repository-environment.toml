@@ -1,0 +1,18 @@
+schema_version = 1
+
+[policy]
+track = "latest-stable"
+
+[system]
+apt = []
+
+[setup]
+commands = ["python3 -m pip install --disable-pip-version-check -r requirements-dev.txt"]
+
+[maintenance]
+commands = ["python3 -m pip install --disable-pip-version-check -r requirements-dev.txt"]
+
+[cache]
+paths = ["~/.cache/pip"]
+
+[compatibility_holds]
