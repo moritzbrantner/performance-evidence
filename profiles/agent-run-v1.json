@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "id": "agent-run/v1",
+  "description": "Portable computational-cost evidence for one coding-agent implementation attempt.",
+  "scenario_id": "agent/implementation-attempt",
+  "producer_adapters": [
+    "agent-loop-orchestrator/agent-loop-efficiency"
+  ],
+  "measurements": [
+    {
+      "name": "agent.candidate_produced",
+      "group": "useful_work",
+      "unit": "count",
+      "measurement_type": "counter",
+      "source": "candidateSha",
+      "rule": "1 when a candidate SHA exists, otherwise 0"
+    },
+    {
+      "name": "agent.input_tokens",
+      "group": "induced_work",
+      "unit": "token",
+      "measurement_type": "counter",
+      "source": "usage.inputTokens"
+    },
+    {
+      "name": "agent.output_tokens",
+      "group": "induced_work",
+      "unit": "token",
+      "measurement_type": "counter",
+      "source": "usage.outputTokens"
+    },
+    {
+      "name": "agent.cached_input_tokens",
+      "group": "induced_work",
+      "unit": "token",
+      "measurement_type": "counter",
+      "source": "usage.cachedInputTokens"
+    },
+    {
+      "name": "agent.execution_time",
+      "group": "outcomes",
+      "unit": "ms",
+      "measurement_type": "duration",
+      "source": "executionMs"
+    },
+    {
+      "name": "agent.deterministic_time_to_green",
+      "group": "outcomes",
+      "unit": "ms",
+      "measurement_type": "duration",
+      "source": "deterministicTimeToGreenMs"
+    },
+    {
+      "name": "agent.cost",
+      "group": "outcomes",
+      "unit": "usd",
+      "measurement_type": "gauge",
+      "source": "usage.costUsd"
+    }
+  ],
+  "metadata_extension": {
+    "namespace": "agent.execution",
+    "fields": [
+      "task_id",
+      "run_id",
+      "project_id",
+      "provider",
+      "model",
+      "attempt_number",
+      "outcome",
+      "failure_reason",
+      "escalation_reason",
+      "resumed_provider_session",
+      "ci_run_ids"
+    ],
+    "excluded_fields": [
+      "provider_session_id"
+    ]
+  },
+  "provenance": {
+    "source_revision": "baselineSha",
+    "candidate_revision": "candidateSha is metadata/output, not the source revision of the attempt",
+    "workload_identity": "stable task/project/baseline identity; exclude run ID, attempt number, provider, model, timing, and usage",
+    "environment": "preserve the orchestrator environment verification evidence and derive the canonical fingerprint deterministically from its semantic fields"
+  }
+}

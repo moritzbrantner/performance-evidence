@@ -4,10 +4,10 @@ Performance Evidence is the shared contract for deterministic computational-cost
 
 ## Architectural boundaries
 
-- **Performance Evidence owns the evidence contract.** Scenario identity, provenance, counters, comparison semantics, budget policy, and adapter contracts live here.
+- **Performance Evidence owns the evidence contract.** Scenario identity, provenance, counters, comparison semantics, budget policy, measurement profiles, and adapter contracts live here.
 - **Runtime Profiler consumes evidence.** Flamegraphs, interactive exploration, history, GitHub Pages, and rich presentation belong there.
 - **Architecture review skills consume evidence.** They correlate code/dataflow changes with copies, allocations, materialization, repeated traversal, recomputation, and other work amplification.
-- **Domain repositories own semantic counters.** A physics engine knows what a body visit or contact test means; a table package knows what row materialization means; React tooling knows what a render/commit means.
+- **Domain repositories own semantic counters.** A physics engine knows what a body visit or contact test means; a table package knows what row materialization means; React tooling knows what a render/commit means; the agent execution layer knows what an attempt and candidate mean.
 - **Wall-clock time is an outcome, not the sole authority.** Deterministic or near-deterministic work evidence should be preferred for CI gating when possible; timing remains important calibration evidence.
 
 ## Evidence model
@@ -20,8 +20,8 @@ Every reproducible scenario should be able to emit a portable evidence record co
 - deterministic seed/configuration where applicable;
 - environment/toolchain/profiler fingerprint;
 - **useful work** counters: work that directly advances the scenario;
-- **induced work** counters: traversals, allocations, allocated bytes, copies/bytes copied, materializations, recomputations, serialization, framework work, etc.;
-- outcome measurements such as elapsed time, throughput, or frame time;
+- **induced work** counters: traversals, allocations, allocated bytes, copies/bytes copied, materializations, recomputations, serialization, framework work, agent token use, etc.;
+- outcome measurements such as elapsed time, throughput, frame time, time-to-green, or monetary cost;
 - optional profiler artifacts and hashes;
 - baseline provenance and comparison results.
 
@@ -37,6 +37,17 @@ The machine-readable artifact is authoritative. Markdown reports and GitHub Page
 - [x] Add valid and invalid fixtures.
 - [x] Add deterministic validation in CI.
 - [x] Document extension rules so domain counters remain comparable without centralizing domain semantics here.
+
+## Integration slice — Agent run evidence profile
+
+- [x] Define a machine-validated measurement-profile contract without creating a second evidence format.
+- [x] Define `agent-run/v1` for one coding-agent implementation attempt.
+- [x] Standardize candidate production, input/output/cached tokens, execution time, deterministic time-to-green, and monetary cost.
+- [x] Map the profile to the existing `agent-loop-orchestrator` efficiency ledger while preserving orchestration/ledger ownership there.
+- [x] Keep provider session identifiers out of portable artifacts.
+- [x] Add a canonical valid fixture and include profiles in deterministic dogfood validation.
+- [ ] Teach `agent-loop-orchestrator` to export canonical per-attempt Performance Evidence using the profile.
+- [ ] Aggregate canonical attempt evidence in the weekly efficiency rollup without replacing the richer orchestrator ledger view.
 
 ## Slice 2 — Comparison and work amplification
 
@@ -123,7 +134,8 @@ Dogfood across deliberately different workloads before broad rollout:
 2. data processing/tables: scans, indexes, materialization, collation;
 3. React/browser: commits, renders, effects, DOM work;
 4. rendering/WASM: uploads, boundary copies, frame work;
-5. .NET services: allocations, query work, serialization, request-level semantic counters.
+5. .NET services: allocations, query work, serialization, request-level semantic counters;
+6. coding agents: tokens, attempts, execution time, time-to-green, escalation, and accepted candidates.
 
 Then integrate the common contract into reusable workflows and repository convergence so new projects inherit evidence collection early rather than adding profiling only after performance degrades.
 
@@ -133,11 +145,12 @@ For each hot path or performance-sensitive PR, the eventual tooling should make 
 
 - What is the useful work of this scenario?
 - What induced work does the implementation perform to achieve it?
-- Which work scales with input size, changed state, visible state, or interaction count?
+- Which work scales with input size, changed state, visible state, interaction count, or agent attempt count?
 - Did a delta become a snapshot?
 - Did a view/borrow become an owned copy?
 - Did laziness become eager materialization?
 - Did one traversal become several?
 - Did unchanged data cross an FFI/WASM/network boundary again?
 - Was derived state recomputed despite unchanged authority?
+- Did a routing/escalation choice consume more tokens or time for an equivalent task without improving checked output?
 - Which changes are deterministic regressions, and which are only noisy timing differences?

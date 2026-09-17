@@ -2,7 +2,7 @@
 
 A language- and profiler-neutral foundation for making computational work observable, comparable, and reviewable.
 
-Performance Evidence treats elapsed time as an outcome rather than the whole explanation. Its primary job is to capture deterministic or near-deterministic evidence about the work a program performs: traversals, allocations, copies, materializations, recomputation, framework work, and other domain-specific counters.
+Performance Evidence treats elapsed time as an outcome rather than the whole explanation. Its primary job is to capture deterministic or near-deterministic evidence about the work a program performs: traversals, allocations, copies, materializations, recomputation, framework work, agent token use, and other domain-specific counters.
 
 ## Responsibilities
 
@@ -13,9 +13,9 @@ This repository owns:
 - useful-work and induced-work counters;
 - exact-head/baseline comparison semantics;
 - portable validation and CI policy primitives;
-- adapters that translate profiler/framework output into the canonical evidence model.
+- adapters and measurement profiles that translate profiler/framework/agent output into the canonical evidence model.
 
-It does **not** own rich profiling UI or historical exploration. `runtime-profiler` should consume these artifacts for analysis and presentation. Coding-agent architecture review skills should consume the same artifacts when reasoning about copies, allocations, materialization, recomputation, and work amplification.
+It does **not** own rich profiling UI, historical exploration, or agent orchestration. `runtime-profiler` should consume these artifacts for analysis and presentation. Coding-agent architecture review skills should consume the same artifacts when reasoning about copies, allocations, materialization, recomputation, work amplification, and execution cost.
 
 ## Core principle
 
@@ -30,11 +30,12 @@ Examples include:
 - rows materialized / rows consumed;
 - component renders / semantic UI changes;
 - contacts tested / contacts produced;
-- snapshots produced / explicitly requested snapshots.
+- snapshots produced / explicitly requested snapshots;
+- agent tokens consumed / accepted candidate produced.
 
 ## Contract
 
-The first implementation slice establishes the versioned JSON contract in [`schema/performance-evidence.schema.json`](schema/performance-evidence.schema.json). See [`docs/contract.md`](docs/contract.md) for classification, provenance, measurement identity, artifact, and extension rules.
+The first implementation slice establishes the versioned JSON contract in [`schema/performance-evidence.schema.json`](schema/performance-evidence.schema.json). Measurement profiles are separately validated by [`schema/measurement-profile.schema.json`](schema/measurement-profile.schema.json). See [`docs/contract.md`](docs/contract.md) for classification, provenance, measurement identity, artifact, and extension rules.
 
 Validate it locally with:
 
@@ -46,6 +47,8 @@ python scripts/validate_schema.py
 ## Agent landscape
 
 Performance Evidence remains the canonical computational-cost payload when used by coding agents. Repository capability discovery belongs to `coding-tooling`, hosted execution to `reusable-workflows`, profiling/exploration to `runtime-profiler`, and durable orchestration to `agent-loop-orchestrator`. When evidence crosses an independently owned component boundary, `agent-contracts` may wrap the immutable artifact as an `agent.evidence/v1` reference rather than replacing this schema.
+
+The initial [`agent-run/v1`](profiles/agent-run-v1.json) profile standardizes one implementation attempt: candidate production, token use, execution time, deterministic time-to-green, and cost. It maps directly from the existing `agent-loop-orchestrator` efficiency ledger without moving ledger or routing authority into this repository. See [`docs/agent-run-profile.md`](docs/agent-run-profile.md).
 
 See [`docs/agent-landscape.md`](docs/agent-landscape.md) for the direct repository path, cross-component path, and integration invariants.
 
