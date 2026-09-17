@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "sourceRevision": "6a50bc1464c73ceb1b92d34ef543fe702f506080",
+  "requestedModules": [
+    "base",
+    "dependencies",
+    "environment",
+    "git"
+  ],
+  "resolvedModules": [
+    "base",
+    "dependencies",
+    "environment",
+    "git"
+  ],
+  "files": {
+    "modules/base/principles/README.md": "76eabf9bd1006ec6948a1721af11a8e579d3503a62b2442e5b3a31132ae639f1",
+    "modules/base/conventions/agents/README.md": "d304bfba5bfa5bd79544c1c479008226fab6b0308c9dbf409f583f73d485db7d",
+    "modules/base/conventions/codebase-design/README.md": "ae902ce07158a13e2340319215033d8b86e8f58060274e2f669cf28a537377ce",
+    "modules/base/conventions/repository/README.md": "9bdbde37e18cb339035fe2e725078de8e91c42b499fa153e1a2df460bcda10dc",
+    "modules/base/conventions/repository/REPO-010.json": "9f5cb19d1dcb35b8b7d7866d87200db6b1717806a0a894bd951bf1d54e771333",
+    "modules/base/conventions/repository/REPO-012.json": "8d8139e3e99bda60ed85db1aefd3149b383818bd74888fc255d3d6c57acb226e",
+    "modules/base/conventions/repository/REPO-013.json": "579de2f1800e75119e85f73dcbc85d78735444eb6dd79562e511488b6e7c62fd",
+    "modules/base/conventions/reproducibility/README.md": "13ff3caa6891e967b31e2f7199ca66bc5dd15d73fb64597e509ad656925dedc9",
+    "modules/base/conventions/reproducibility/REP-011.json": "4ba7ca9eaf0343c94daecb80347694db25a78bb0aaf254256902f21d7ed5caff",
+    "modules/base/conventions/reliability/README.md": "014d10aa07ce42f8537bafdb7ed2e382e4ef35be09ffec501c9b7e000666626f",
+    "modules/base/conventions/testing/README.md": "78f68bc9410c920b18ef3e6792bb4185f9999ee39e4b33425bfc8c5bd4f37119",
+    "modules/base/conventions/scripts/README.md": "8a72616fc9b04833e9c2208712666b3e934b1e046f2a25c8c64388d76e8ba899",
+    "modules/base/conventions/security/README.md": "13d51a84d3aec3efc8f1919417680698c9dc7ab1c01286e0454ef8149c33c0fa",
+    "modules/dependencies/conventions/dependencies/README.md": "917e22e9e12ba7cba5bc5a9eabc50adfb920e74a159145414945cc0449c81713",
+    "modules/environment/conventions/environment/README.md": "4884c5fda788932175064546eeff3cb1c1f132c2cb79f9090fb54f540e882410",
+    "modules/environment/conventions/environment/ENV-003.json": "00cd5d367701829437017c6c3a31801f614f00d151e90fd3653ee54f3235ecd9",
+    "modules/git/conventions/git/README.md": "cb0c94587017ac5f06ebcc07662a8a9d335e565e14c5fda60ac7c29e5fb479b5",
+    "modules/git/conventions/git/GIT-004.json": "0521ce533d9055e07dfa2183c947aa2578ae5d0da77a9296454ab0bb0f3d822d",
+    "configurations.json": "569bf6db9f0a2c85726ccb231698002bb12727682fbfd96e93472591427b14f2",
+    "index.md": "7c47ecf143a75412f5a48727e9001c918750cda496c8a674a1839250f17b3d9f"
+  }
+}
