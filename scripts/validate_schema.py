@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+import argparse
+import hashlib
+import importlib.metadata
 import json
+import os
+import platform
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -15,6 +21,7 @@ SCHEMA_PATH = ROOT / "schema" / "performance-evidence.schema.json"
 VALID_FIXTURES = ROOT / "fixtures" / "valid"
 INVALID_FIXTURES = ROOT / "fixtures" / "invalid"
 MEASUREMENT_GROUPS = ("useful_work", "induced_work", "outcomes")
+REPOSITORY_URI = "https://github.com/moritzbrantner/performance-evidence"
 
 
 def load_json(path: Path) -> Any:
@@ -74,12 +81,171 @@ def validation_errors(
     return errors
 
 
-def validate_fixtures() -> int:
+def sha256_bytes(contents: bytes) -> str:
+    return "sha256:" + hashlib.sha256(contents).hexdigest()
+
+
+def workload_hash(paths: list[Path]) -> str:
+    digest = hashlib.sha256()
+    for path in sorted(paths):
+        relative = path.relative_to(ROOT).as_posix().encode("utf-8")
+        digest.update(relative)
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return "sha256:" + digest.hexdigest()
+
+
+def source_state() -> tuple[str, bool]:
+    revision = os.environ.get("GITHUB_SHA")
+    if not revision:
+        revision = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
+        ).strip()
+
+    dirty = bool(
+        subprocess.check_output(
+            ["git", "status", "--porcelain"], cwd=ROOT, text=True
+        ).strip()
+    )
+    return revision, dirty
+
+
+def environment_evidence() -> dict[str, Any]:
+    platform_data = {
+        "system": platform.system().lower(),
+        "machine": platform.machine().lower(),
+    }
+    toolchain = {
+        "python": platform.python_version(),
+        "jsonschema": importlib.metadata.version("jsonschema"),
+    }
+    collector = {
+        "name": "performance-evidence.contract-validator",
+        "version": "1.0.0",
+    }
+    fingerprint_payload = json.dumps(
+        {
+            "platform": platform_data,
+            "toolchain": toolchain,
+            "collector": collector,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return {
+        "fingerprint": sha256_bytes(fingerprint_payload),
+        "platform": platform_data,
+        "toolchain": toolchain,
+        "collector": collector,
+    }
+
+
+def measurement(name: str, value: int, description: str) -> dict[str, Any]:
+    return {
+        "name": name,
+        "value": value,
+        "unit": "count",
+        "measurement_type": "counter",
+        "description": description,
+    }
+
+
+def build_dogfood_evidence(
+    valid_paths: list[Path],
+    invalid_paths: list[Path],
+    measurement_entries_examined: int,
+) -> dict[str, Any]:
+    revision, dirty = source_state()
+    workload_paths = [SCHEMA_PATH, *valid_paths, *invalid_paths]
+    fixture_count = len(valid_paths) + len(invalid_paths)
+
+    return {
+        "schema_version": "1.0.0",
+        "scenario": {
+            "id": "performance-evidence/contract-validation",
+            "description": "Validate the canonical schema plus accepted and rejected fixtures.",
+            "workload": {
+                "id": "schema-and-fixtures-v1",
+                "hash": workload_hash(workload_paths),
+                "parameters": {
+                    "valid_fixtures": len(valid_paths),
+                    "invalid_fixtures": len(invalid_paths),
+                },
+            },
+        },
+        "source": {
+            "repository": REPOSITORY_URI,
+            "revision": revision,
+            "dirty": dirty,
+        },
+        "environment": environment_evidence(),
+        "measurements": {
+            "useful_work": [
+                measurement(
+                    "valid_fixtures_verified",
+                    len(valid_paths),
+                    "Fixtures expected to conform that were verified.",
+                ),
+                measurement(
+                    "invalid_fixtures_rejected",
+                    len(invalid_paths),
+                    "Fixtures expected to fail that were rejected.",
+                ),
+            ],
+            "induced_work": [
+                measurement(
+                    "json_documents_loaded",
+                    fixture_count + 1,
+                    "Schema and fixture JSON documents loaded for the scenario.",
+                ),
+                measurement(
+                    "fixture_validations",
+                    fixture_count,
+                    "Fixture documents passed through schema and semantic validation.",
+                ),
+                measurement(
+                    "measurement_entries_examined",
+                    measurement_entries_examined,
+                    "Measurement entries inspected by semantic validation.",
+                ),
+            ],
+            "outcomes": [
+                measurement(
+                    "validation_failures",
+                    0,
+                    "Unexpected fixture or contract validation failures.",
+                )
+            ],
+        },
+    }
+
+
+def write_evidence(
+    output_path: Path,
+    validator: Draft202012Validator,
+    evidence: dict[str, Any],
+) -> None:
+    errors = validation_errors(validator, evidence)
+    if errors:
+        raise RuntimeError(
+            "dogfood evidence failed its own contract:\n  - " + "\n  - ".join(errors)
+        )
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps(evidence, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def validate_fixtures(evidence_path: Path | None = None) -> int:
     schema = load_json(SCHEMA_PATH)
     Draft202012Validator.check_schema(schema)
     validator = Draft202012Validator(schema, format_checker=FormatChecker())
 
     failures: list[str] = []
+    measurement_entries_examined = 0
 
     valid_paths = sorted(VALID_FIXTURES.glob("*.json"))
     invalid_paths = sorted(INVALID_FIXTURES.glob("*.json"))
@@ -90,7 +256,12 @@ def validate_fixtures() -> int:
         failures.append("no invalid fixtures found")
 
     for path in valid_paths:
-        errors = validation_errors(validator, load_json(path))
+        document = load_json(path)
+        measurement_entries_examined += sum(
+            len(document.get("measurements", {}).get(group, []))
+            for group in MEASUREMENT_GROUPS
+        )
+        errors = validation_errors(validator, document)
         if errors:
             failures.append(
                 f"valid fixture {path.relative_to(ROOT)} was rejected:\n  - "
@@ -98,7 +269,12 @@ def validate_fixtures() -> int:
             )
 
     for path in invalid_paths:
-        errors = validation_errors(validator, load_json(path))
+        document = load_json(path)
+        measurement_entries_examined += sum(
+            len(document.get("measurements", {}).get(group, []))
+            for group in MEASUREMENT_GROUPS
+        )
+        errors = validation_errors(validator, document)
         if not errors:
             failures.append(
                 f"invalid fixture {path.relative_to(ROOT)} unexpectedly passed validation"
@@ -110,12 +286,37 @@ def validate_fixtures() -> int:
             print(f"- {failure}", file=sys.stderr)
         return 1
 
+    if evidence_path is not None:
+        try:
+            evidence = build_dogfood_evidence(
+                valid_paths, invalid_paths, measurement_entries_examined
+            )
+            write_evidence(evidence_path, validator, evidence)
+        except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
+            print(f"Performance Evidence dogfood emission failed: {error}", file=sys.stderr)
+            return 1
+
     print(
         "Performance Evidence contract validation passed "
         f"({len(valid_paths)} valid, {len(invalid_paths)} invalid fixtures)."
     )
+    if evidence_path is not None:
+        print(f"Dogfood evidence written to {evidence_path}.")
     return 0
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Validate the Performance Evidence schema and fixtures."
+    )
+    parser.add_argument(
+        "--evidence",
+        type=Path,
+        help="Write dogfood performance evidence for the validation scenario.",
+    )
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    raise SystemExit(validate_fixtures())
+    args = parse_args()
+    raise SystemExit(validate_fixtures(args.evidence))
