@@ -6,10 +6,17 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
+from jsonschema import Draft202012Validator, FormatChecker
 
+from validate_schema import validation_errors
+
+
+ROOT = Path(__file__).resolve().parents[1]
+SCHEMA_PATH = ROOT / "schema" / "performance-evidence.schema.json"
 COLLECTOR_NAME = "performance-evidence.agent-loop-efficiency-adapter"
 COLLECTOR_VERSION = "1.0.0"
 SCENARIO_ID = "agent/implementation-attempt"
@@ -230,7 +237,9 @@ def output_name(attempt: dict[str, Any]) -> str:
     return f"{safe_run_id}.attempt-{attempt_number}.performance-evidence.json"
 
 
-def convert_report(report: dict[str, Any], source_dirty: bool) -> list[tuple[str, dict[str, Any]]]:
+def convert_report(
+    report: dict[str, Any], source_dirty: bool
+) -> list[tuple[str, dict[str, Any]]]:
     attempts = report.get("attempts")
     if not isinstance(attempts, list):
         raise ValueError("efficiency report must contain an attempts array")
@@ -246,6 +255,19 @@ def convert_report(report: dict[str, Any], source_dirty: bool) -> list[tuple[str
         seen_names.add(name)
         converted.append((name, convert_attempt(attempt, source_dirty)))
     return converted
+
+
+def validate_converted(
+    converted: list[tuple[str, dict[str, Any]]]
+) -> list[str]:
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    Draft202012Validator.check_schema(schema)
+    validator = Draft202012Validator(schema, format_checker=FormatChecker())
+    failures: list[str] = []
+    for name, evidence in converted:
+        for error in validation_errors(validator, evidence):
+            failures.append(f"{name}: {error}")
+    return failures
 
 
 def parse_bool(value: str) -> bool:
@@ -278,6 +300,12 @@ def main() -> int:
         if not isinstance(report, dict):
             raise ValueError("efficiency report root must be an object")
         converted = convert_report(report, args.source_dirty)
+        failures = validate_converted(converted)
+        if failures:
+            raise ValueError(
+                "converted evidence violates canonical contract:\n  - "
+                + "\n  - ".join(failures)
+            )
         args.output_dir.mkdir(parents=True, exist_ok=True)
         for name, evidence in converted:
             (args.output_dir / name).write_text(
@@ -293,6 +321,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    import sys
-
     raise SystemExit(main())
