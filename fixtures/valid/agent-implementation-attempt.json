@@ -1,0 +1,93 @@
+{
+  "schema_version": "1.0.0",
+  "scenario": {
+    "id": "agent/implementation-attempt",
+    "description": "One coding-agent implementation attempt measured for computational cost and time-to-green.",
+    "workload": {
+      "id": "repository-task-v1",
+      "hash": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      "parameters": {
+        "task_id": "018f5d42-7c2a-7b37-a912-3c7343db8b3f",
+        "project_id": "physics-engine",
+        "baseline_revision": "0123456789abcdef0123456789abcdef01234567"
+      }
+    }
+  },
+  "source": {
+    "repository": "https://github.com/example/physics-engine",
+    "revision": "0123456789abcdef0123456789abcdef01234567",
+    "dirty": false
+  },
+  "environment": {
+    "fingerprint": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+    "collector": {
+      "name": "agent-loop-orchestrator.agent-loop-efficiency",
+      "version": "1"
+    }
+  },
+  "measurements": {
+    "useful_work": [
+      {
+        "name": "agent.candidate_produced",
+        "value": 1,
+        "unit": "count",
+        "measurement_type": "counter"
+      }
+    ],
+    "induced_work": [
+      {
+        "name": "agent.input_tokens",
+        "value": 18420,
+        "unit": "token",
+        "measurement_type": "counter"
+      },
+      {
+        "name": "agent.output_tokens",
+        "value": 4932,
+        "unit": "token",
+        "measurement_type": "counter"
+      },
+      {
+        "name": "agent.cached_input_tokens",
+        "value": 6400,
+        "unit": "token",
+        "measurement_type": "counter"
+      }
+    ],
+    "outcomes": [
+      {
+        "name": "agent.execution_time",
+        "value": 81234,
+        "unit": "ms",
+        "measurement_type": "duration"
+      },
+      {
+        "name": "agent.deterministic_time_to_green",
+        "value": 117000,
+        "unit": "ms",
+        "measurement_type": "duration"
+      },
+      {
+        "name": "agent.cost",
+        "value": 0.42,
+        "unit": "usd",
+        "measurement_type": "gauge"
+      }
+    ]
+  },
+  "extensions": {
+    "agent.execution": {
+      "task_id": "018f5d42-7c2a-7b37-a912-3c7343db8b3f",
+      "run_id": "018f5d43-4d1c-7fd5-aed5-d451fd71c110",
+      "project_id": "physics-engine",
+      "provider": "example-provider",
+      "model": "example-model",
+      "attempt_number": 1,
+      "outcome": "passed",
+      "failure_reason": null,
+      "escalation_reason": null,
+      "resumed_provider_session": false,
+      "ci_run_ids": [123456789]
+    }
+  }
+}
