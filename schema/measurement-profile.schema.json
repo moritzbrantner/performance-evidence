@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://moritzbrantner.github.io/performance-evidence/schema/measurement-profile.schema.json",
+  "title": "Performance Evidence Measurement Profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "description",
+    "scenario_id",
+    "producer_adapters",
+    "measurements",
+    "metadata_extension",
+    "provenance"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:[._/-][a-z0-9]+)*$" },
+    "description": { "type": "string", "minLength": 1 },
+    "scenario_id": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:[._/-][a-z0-9]+)*$" },
+    "producer_adapters": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "measurements": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/measurement" }
+    },
+    "metadata_extension": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["namespace", "fields", "excluded_fields"],
+      "properties": {
+        "namespace": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)+$" },
+        "fields": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "excluded_fields": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    }
+  },
+  "$defs": {
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "group", "unit", "measurement_type", "source"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:[._/-][a-z0-9]+)*$" },
+        "group": { "enum": ["useful_work", "induced_work", "outcomes"] },
+        "unit": { "type": "string", "minLength": 1 },
+        "measurement_type": { "enum": ["counter", "gauge", "duration", "size", "rate", "ratio"] },
+        "source": { "type": "string", "minLength": 1 },
+        "rule": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
