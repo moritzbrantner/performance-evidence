@@ -63,6 +63,7 @@
     "fields": [
       "task_id",
       "run_id",
+      "attempt_id",
       "project_id",
       "provider",
       "model",
@@ -80,7 +81,7 @@
   "provenance": {
     "source_revision": "baselineSha",
     "candidate_revision": "candidateSha is metadata/output, not the source revision of the attempt",
-    "workload_identity": "stable task/project/baseline identity; exclude run ID, attempt number, provider, model, timing, and usage",
+    "workload_identity": "stable task/project/baseline identity; exclude run ID, attempt ID, attempt number, provider, model, timing, and usage",
     "environment": "preserve the orchestrator environment verification evidence and derive the canonical fingerprint deterministically from its semantic fields"
   }
 }
