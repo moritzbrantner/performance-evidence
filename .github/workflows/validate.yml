@@ -12,16 +12,15 @@ permissions:
 jobs:
   foundation:
     name: Repository foundation
-    uses: moritzbrantner/reusable-workflows/.github/workflows/coding-tooling-validation.yml@fd22697af1dfc42e4b8d66e222e1a7c415da2be0
+    uses: moritzbrantner/reusable-workflows/.github/workflows/coding-tooling-validation.yml@648c072367198309ae88263131793f182449bb7c
     with:
       operation: foundation
-      allow_missing_foundation: true
       install_mode: none
       report_path: .artifacts/coding-tooling/foundation.json
 
   findings:
     name: Deterministic findings
-    uses: moritzbrantner/reusable-workflows/.github/workflows/coding-tooling-validation.yml@fd22697af1dfc42e4b8d66e222e1a7c415da2be0
+    uses: moritzbrantner/reusable-workflows/.github/workflows/coding-tooling-validation.yml@648c072367198309ae88263131793f182449bb7c
     with:
       operation: findings
       install_mode: none
@@ -29,7 +28,7 @@ jobs:
 
   contract:
     name: Repository validation
-    uses: moritzbrantner/reusable-workflows/.github/workflows/command-validation.yml@fd22697af1dfc42e4b8d66e222e1a7c415da2be0
+    uses: moritzbrantner/reusable-workflows/.github/workflows/command-validation.yml@648c072367198309ae88263131793f182449bb7c
     with:
       command: python3 scripts/validate_schema.py
 
