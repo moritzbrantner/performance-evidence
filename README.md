@@ -50,6 +50,17 @@ Performance Evidence remains the canonical computational-cost payload when used 
 
 The initial [`agent-run/v1`](profiles/agent-run-v1.json) profile standardizes one implementation attempt: candidate production, token use, execution time, deterministic time-to-green, and cost. It maps directly from the existing `agent-loop-orchestrator` efficiency ledger without moving ledger or routing authority into this repository. See [`docs/agent-run-profile.md`](docs/agent-run-profile.md).
 
+An existing `agent-loop-efficiency` report can be converted deterministically into one canonical artifact per attempt:
+
+```sh
+python scripts/convert_agent_loop_efficiency.py \
+  agent-loop-efficiency.json \
+  .artifacts/performance-evidence/agent-runs \
+  --source-dirty false
+```
+
+Pass `--source-dirty false` only when the execution layer established an exact clean baseline. The adapter preserves missing token/time/cost telemetry as missing instead of converting it to zero.
+
 See [`docs/agent-landscape.md`](docs/agent-landscape.md) for the direct repository path, cross-component path, and integration invariants.
 
 See [ROADMAP.md](ROADMAP.md) for the planned slices.
