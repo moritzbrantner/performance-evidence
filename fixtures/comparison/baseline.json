@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0.0",
+  "scenario": {
+    "id": "physics/resting-stack-100",
+    "description": "Comparison fixture baseline.",
+    "workload": {
+      "id": "resting-stack-100",
+      "hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "seed": 42,
+      "parameters": {
+        "body_count": 100,
+        "steps": 120
+      }
+    }
+  },
+  "source": {
+    "repository": "https://github.com/example/physics-engine",
+    "revision": "0000000000000000000000000000000000000000",
+    "dirty": false
+  },
+  "environment": {
+    "fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "platform": {
+      "os": "linux",
+      "arch": "x86_64"
+    },
+    "toolchain": {
+      "rustc": "1.x"
+    },
+    "collector": {
+      "name": "fixture",
+      "version": "1.0.0"
+    }
+  },
+  "measurements": {
+    "useful_work": [
+      {
+        "name": "physics.changed_bodies",
+        "value": 8,
+        "unit": "count",
+        "measurement_type": "counter"
+      }
+    ],
+    "induced_work": [
+      {
+        "name": "physics.body_visits",
+        "value": 126,
+        "unit": "count",
+        "measurement_type": "counter"
+      },
+      {
+        "name": "memory.bytes_copied",
+        "value": 0,
+        "unit": "byte",
+        "measurement_type": "size"
+      },
+      {
+        "name": "cpu.instructions",
+        "value": 1000,
+        "unit": "instruction",
+        "measurement_type": "counter"
+      },
+      {
+        "name": "physics.only_baseline",
+        "value": 10,
+        "unit": "count",
+        "measurement_type": "counter"
+      }
+    ],
+    "outcomes": [
+      {
+        "name": "time.elapsed",
+        "value": 584000,
+        "unit": "ns",
+        "measurement_type": "duration"
+      }
+    ]
+  }
+}
