@@ -63,4 +63,6 @@ Pass `--source-dirty false` only when the execution layer established an exact c
 
 See [`docs/agent-landscape.md`](docs/agent-landscape.md) for the direct repository path, cross-component path, and integration invariants.
 
+CI artifact producers can use the [`ci-artifact-reuse/v1` profile](docs/ci-artifact-reuse-profile.md) to report setup, build, upload, artifact-size, and fan-out economics without turning those measurements into correctness or release authority.
+
 See [ROADMAP.md](ROADMAP.md) for the planned slices.
