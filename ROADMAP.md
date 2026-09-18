@@ -51,12 +51,12 @@ The machine-readable artifact is authoritative. Markdown reports and GitHub Page
 
 ## Slice 2 — Comparison and work amplification
 
-- [ ] Define exact-head vs baseline comparison semantics.
-- [ ] Add absolute and relative deltas without hiding zero/near-zero baselines.
+- [x] Define exact-head vs baseline comparison semantics.
+- [x] Add absolute and relative deltas without hiding zero/near-zero baselines.
 - [ ] Introduce first-class amplification ratios such as `entities_visited / entities_changed` and `bytes_copied / bytes_changed`.
 - [ ] Preserve raw measurements alongside derived ratios.
-- [ ] Define missing/incomparable evidence explicitly rather than silently coercing it.
-- [ ] Produce a stable machine-readable comparison artifact.
+- [x] Define missing/incomparable evidence explicitly rather than silently coercing it.
+- [x] Produce a stable machine-readable comparison artifact.
 
 ## Slice 3 — Budgets and CI policy
 

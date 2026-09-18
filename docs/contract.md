@@ -43,7 +43,7 @@ Evidence is not comparable without workload and source provenance. Every documen
 - an environment fingerprint;
 - optional platform, toolchain, and collector metadata.
 
-A later comparison policy may reject dirty or environment-mismatched evidence even though the base interchange schema can represent it.
+The derived comparison contract rejects dirty, workload-mismatched, or environment-mismatched evidence from delta calculation rather than coercing it into a result. For integration decisions, callers can bind the candidate artifact to the reviewed head revision. See [comparison.md](comparison.md).
 
 ## Artifacts
 

@@ -10,6 +10,7 @@ import os
 import platform
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +20,9 @@ from jsonschema import Draft202012Validator, FormatChecker
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / "schema" / "performance-evidence.schema.json"
 PROFILE_SCHEMA_PATH = ROOT / "schema" / "measurement-profile.schema.json"
+COMPARISON_SCHEMA_PATH = ROOT / "schema" / "performance-comparison.schema.json"
 PROFILES = ROOT / "profiles"
+COMPARISON_FIXTURES = ROOT / "fixtures" / "comparison"
 VALID_FIXTURES = ROOT / "fixtures" / "valid"
 INVALID_FIXTURES = ROOT / "fixtures" / "invalid"
 MEASUREMENT_GROUPS = ("useful_work", "induced_work", "outcomes")
@@ -193,9 +196,13 @@ def build_dogfood_evidence(
     measurement_entries_examined: int,
 ) -> dict[str, Any]:
     revision, dirty = source_state()
+    comparison_paths = sorted(COMPARISON_FIXTURES.glob("*.json"))
     workload_paths = [
         SCHEMA_PATH,
         PROFILE_SCHEMA_PATH,
+        COMPARISON_SCHEMA_PATH,
+        ROOT / "scripts" / "compare_evidence.py",
+        *comparison_paths,
         *profile_paths,
         *valid_paths,
         *invalid_paths,
@@ -240,11 +247,16 @@ def build_dogfood_evidence(
                     len(invalid_paths),
                     "Fixtures expected to fail that were rejected.",
                 ),
+                measurement(
+                    "comparison_contracts_verified",
+                    1,
+                    "Comparison contract and deterministic comparison fixture verified.",
+                ),
             ],
             "induced_work": [
                 measurement(
                     "json_documents_loaded",
-                    fixture_count + len(profile_paths) + 2,
+                    fixture_count + len(profile_paths) + len(comparison_paths) + 3,
                     "Schemas, profiles, and fixture JSON documents loaded for the scenario.",
                 ),
                 measurement(
@@ -256,6 +268,11 @@ def build_dogfood_evidence(
                     "fixture_validations",
                     fixture_count,
                     "Fixture documents passed through schema and semantic validation.",
+                ),
+                measurement(
+                    "comparison_fixture_validations",
+                    len(comparison_paths),
+                    "Comparison inputs and expected output checked for deterministic semantics.",
                 ),
                 measurement(
                     "measurement_entries_examined",
@@ -292,14 +309,141 @@ def write_evidence(
     )
 
 
+
+def validate_comparison_contract(
+    evidence_validator: Draft202012Validator,
+    comparison_validator: Draft202012Validator,
+) -> list[str]:
+    failures: list[str] = []
+    baseline_path = COMPARISON_FIXTURES / "baseline.json"
+    candidate_path = COMPARISON_FIXTURES / "candidate.json"
+    expected_path = COMPARISON_FIXTURES / "expected.json"
+
+    for path in (baseline_path, candidate_path):
+        if not path.is_file():
+            failures.append(f"missing comparison fixture {path.relative_to(ROOT)}")
+            continue
+        errors = validation_errors(evidence_validator, load_json(path))
+        if errors:
+            failures.append(
+                f"comparison evidence fixture {path.relative_to(ROOT)} was rejected:\n  - "
+                + "\n  - ".join(errors)
+            )
+
+    if not expected_path.is_file():
+        failures.append(f"missing comparison fixture {expected_path.relative_to(ROOT)}")
+        return failures
+
+    expected = load_json(expected_path)
+    schema_errors = sorted(
+        comparison_validator.iter_errors(expected),
+        key=lambda error: tuple(str(part) for part in error.absolute_path),
+    )
+    if schema_errors:
+        failures.append(
+            f"comparison fixture {expected_path.relative_to(ROOT)} was rejected:\n  - "
+            + "\n  - ".join(
+                f"{format_path(list(error.absolute_path))}: {error.message}"
+                for error in schema_errors
+            )
+        )
+        return failures
+
+    if failures:
+        return failures
+
+    with tempfile.TemporaryDirectory() as temporary_directory:
+        output_path = Path(temporary_directory) / "comparison.json"
+        command = [
+            sys.executable,
+            str(ROOT / "scripts" / "compare_evidence.py"),
+            str(baseline_path),
+            str(candidate_path),
+            "--expected-candidate-revision",
+            "1111111111111111111111111111111111111111",
+            "--output",
+            str(output_path),
+        ]
+        result = subprocess.run(
+            command,
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            failures.append(
+                "comparison fixture execution failed: "
+                + (result.stderr.strip() or result.stdout.strip())
+            )
+            return failures
+
+        actual = load_json(output_path)
+        if actual != expected:
+            failures.append(
+                "comparison fixture output did not match fixtures/comparison/expected.json"
+            )
+
+        mismatch_path = Path(temporary_directory) / "mismatch.json"
+        mismatch_command = [
+            sys.executable,
+            str(ROOT / "scripts" / "compare_evidence.py"),
+            str(baseline_path),
+            str(candidate_path),
+            "--expected-candidate-revision",
+            "ffffffffffffffffffffffffffffffffffffffff",
+            "--output",
+            str(mismatch_path),
+        ]
+        mismatch = subprocess.run(
+            mismatch_command,
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if mismatch.returncode != 0:
+            failures.append(
+                "incomparable comparison fixture execution failed: "
+                + (mismatch.stderr.strip() or mismatch.stdout.strip())
+            )
+            return failures
+
+        mismatch_document = load_json(mismatch_path)
+        if mismatch_document["comparability"] != {
+            "status": "incomparable",
+            "reasons": ["candidate_revision_mismatch"],
+            "expected_candidate_revision": "ffffffffffffffffffffffffffffffffffffffff",
+        }:
+            failures.append(
+                "candidate revision mismatch did not fail closed with the expected reason"
+            )
+        if any(
+            entry["status"] != "scenario_incomparable"
+            or entry["absolute_delta"] is not None
+            or entry["relative_delta"] != {"status": "unavailable", "value": None}
+            for entry in mismatch_document["measurements"]
+        ):
+            failures.append(
+                "incomparable scenario unexpectedly exposed measurement deltas"
+            )
+
+    return failures
+
+
 def validate_fixtures(evidence_path: Path | None = None) -> int:
     schema = load_json(SCHEMA_PATH)
     profile_schema = load_json(PROFILE_SCHEMA_PATH)
+    comparison_schema = load_json(COMPARISON_SCHEMA_PATH)
     Draft202012Validator.check_schema(schema)
     Draft202012Validator.check_schema(profile_schema)
+    Draft202012Validator.check_schema(comparison_schema)
     validator = Draft202012Validator(schema, format_checker=FormatChecker())
     profile_validator = Draft202012Validator(
         profile_schema, format_checker=FormatChecker()
+    )
+    comparison_validator = Draft202012Validator(
+        comparison_schema, format_checker=FormatChecker()
     )
 
     failures: list[str] = []
@@ -351,6 +495,8 @@ def validate_fixtures(evidence_path: Path | None = None) -> int:
                 f"invalid fixture {path.relative_to(ROOT)} unexpectedly passed validation"
             )
 
+    failures.extend(validate_comparison_contract(validator, comparison_validator))
+
     if failures:
         print("Performance Evidence contract validation failed:", file=sys.stderr)
         for failure in failures:
@@ -373,7 +519,7 @@ def validate_fixtures(evidence_path: Path | None = None) -> int:
     print(
         "Performance Evidence contract validation passed "
         f"({len(profile_paths)} profiles, {len(valid_paths)} valid, "
-        f"{len(invalid_paths)} invalid fixtures)."
+        f"{len(invalid_paths)} invalid fixtures, 1 comparison contract)."
     )
     if evidence_path is not None:
         print(f"Dogfood evidence written to {evidence_path}.")

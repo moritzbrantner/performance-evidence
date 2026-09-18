@@ -1,0 +1,166 @@
+{
+  "baseline": {
+    "dirty": false,
+    "environment_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "evidence_hash": "sha256:712cbbbd52ce119c1dbd7e7128bbeee18bc5d8e2260ddded854767b31e5aae08",
+    "scenario_id": "physics/resting-stack-100",
+    "source_revision": "0000000000000000000000000000000000000000",
+    "workload_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "workload_id": "resting-stack-100"
+  },
+  "candidate": {
+    "dirty": false,
+    "environment_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "evidence_hash": "sha256:e0e89251fdf88fda200b19f6a2b1a24cfdbcdf5e985ed93cd75b52af6e97e6c2",
+    "scenario_id": "physics/resting-stack-100",
+    "source_revision": "1111111111111111111111111111111111111111",
+    "workload_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "workload_id": "resting-stack-100"
+  },
+  "comparability": {
+    "expected_candidate_revision": "1111111111111111111111111111111111111111",
+    "reasons": [],
+    "status": "comparable"
+  },
+  "kind": "performance-evidence/comparison",
+  "measurements": [
+    {
+      "absolute_delta": null,
+      "baseline": {
+        "group": "induced_work",
+        "measurement_type": "counter",
+        "unit": "instruction",
+        "value": 1000
+      },
+      "candidate": {
+        "group": "induced_work",
+        "measurement_type": "gauge",
+        "unit": "instruction",
+        "value": 900
+      },
+      "name": "cpu.instructions",
+      "relative_delta": {
+        "status": "unavailable",
+        "value": null
+      },
+      "status": "incompatible_definition"
+    },
+    {
+      "absolute_delta": 1024,
+      "baseline": {
+        "group": "induced_work",
+        "measurement_type": "size",
+        "unit": "byte",
+        "value": 0
+      },
+      "candidate": {
+        "group": "induced_work",
+        "measurement_type": "size",
+        "unit": "byte",
+        "value": 1024
+      },
+      "name": "memory.bytes_copied",
+      "relative_delta": {
+        "status": "undefined_zero_baseline",
+        "value": null
+      },
+      "status": "comparable"
+    },
+    {
+      "absolute_delta": -26,
+      "baseline": {
+        "group": "induced_work",
+        "measurement_type": "counter",
+        "unit": "count",
+        "value": 126
+      },
+      "candidate": {
+        "group": "induced_work",
+        "measurement_type": "counter",
+        "unit": "count",
+        "value": 100
+      },
+      "name": "physics.body_visits",
+      "relative_delta": {
+        "status": "defined",
+        "value": -0.20634920634920634
+      },
+      "status": "comparable"
+    },
+    {
+      "absolute_delta": 0,
+      "baseline": {
+        "group": "useful_work",
+        "measurement_type": "counter",
+        "unit": "count",
+        "value": 8
+      },
+      "candidate": {
+        "group": "useful_work",
+        "measurement_type": "counter",
+        "unit": "count",
+        "value": 8
+      },
+      "name": "physics.changed_bodies",
+      "relative_delta": {
+        "status": "defined",
+        "value": 0.0
+      },
+      "status": "comparable"
+    },
+    {
+      "absolute_delta": null,
+      "baseline": {
+        "group": "induced_work",
+        "measurement_type": "counter",
+        "unit": "count",
+        "value": 10
+      },
+      "candidate": null,
+      "name": "physics.only_baseline",
+      "relative_delta": {
+        "status": "unavailable",
+        "value": null
+      },
+      "status": "missing_candidate"
+    },
+    {
+      "absolute_delta": null,
+      "baseline": null,
+      "candidate": {
+        "group": "induced_work",
+        "measurement_type": "counter",
+        "unit": "count",
+        "value": 2
+      },
+      "name": "physics.only_candidate",
+      "relative_delta": {
+        "status": "unavailable",
+        "value": null
+      },
+      "status": "missing_baseline"
+    },
+    {
+      "absolute_delta": -84000,
+      "baseline": {
+        "group": "outcomes",
+        "measurement_type": "duration",
+        "unit": "ns",
+        "value": 584000
+      },
+      "candidate": {
+        "group": "outcomes",
+        "measurement_type": "duration",
+        "unit": "ns",
+        "value": 500000
+      },
+      "name": "time.elapsed",
+      "relative_delta": {
+        "status": "defined",
+        "value": -0.14383561643835616
+      },
+      "status": "comparable"
+    }
+  ],
+  "schema_version": "1.0.0"
+}

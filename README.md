@@ -35,7 +35,7 @@ Examples include:
 
 ## Contract
 
-The first implementation slice establishes the versioned JSON contract in [`schema/performance-evidence.schema.json`](schema/performance-evidence.schema.json). Measurement profiles are separately validated by [`schema/measurement-profile.schema.json`](schema/measurement-profile.schema.json). See [`docs/contract.md`](docs/contract.md) for classification, provenance, measurement identity, artifact, and extension rules.
+The first implementation slice establishes the versioned JSON contract in [`schema/performance-evidence.schema.json`](schema/performance-evidence.schema.json). Measurement profiles are separately validated by [`schema/measurement-profile.schema.json`](schema/measurement-profile.schema.json). Exact-head/baseline comparisons use [`schema/performance-comparison.schema.json`](schema/performance-comparison.schema.json) and preserve the original evidence artifacts as the measurement authority. See [`docs/contract.md`](docs/contract.md) and [`docs/comparison.md`](docs/comparison.md).
 
 Validate it locally with:
 

@@ -1,0 +1,83 @@
+{
+  "schema_version": "1.0.0",
+  "scenario": {
+    "id": "physics/resting-stack-100",
+    "description": "Comparison fixture candidate.",
+    "workload": {
+      "id": "resting-stack-100",
+      "hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "seed": 42,
+      "parameters": {
+        "body_count": 100,
+        "steps": 120
+      }
+    }
+  },
+  "source": {
+    "repository": "https://github.com/example/physics-engine",
+    "revision": "1111111111111111111111111111111111111111",
+    "dirty": false
+  },
+  "environment": {
+    "fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "platform": {
+      "os": "linux",
+      "arch": "x86_64"
+    },
+    "toolchain": {
+      "rustc": "1.x"
+    },
+    "collector": {
+      "name": "fixture",
+      "version": "1.0.0"
+    }
+  },
+  "measurements": {
+    "useful_work": [
+      {
+        "name": "physics.changed_bodies",
+        "value": 8,
+        "unit": "count",
+        "measurement_type": "counter"
+      }
+    ],
+    "induced_work": [
+      {
+        "name": "physics.body_visits",
+        "value": 100,
+        "unit": "count",
+        "measurement_type": "counter"
+      },
+      {
+        "name": "memory.bytes_copied",
+        "value": 1024,
+        "unit": "byte",
+        "measurement_type": "size"
+      },
+      {
+        "name": "cpu.instructions",
+        "value": 900,
+        "unit": "instruction",
+        "measurement_type": "gauge"
+      },
+      {
+        "name": "physics.only_candidate",
+        "value": 2,
+        "unit": "count",
+        "measurement_type": "counter"
+      }
+    ],
+    "outcomes": [
+      {
+        "name": "time.elapsed",
+        "value": 500000,
+        "unit": "ns",
+        "measurement_type": "duration"
+      }
+    ]
+  },
+  "baseline": {
+    "source_revision": "0000000000000000000000000000000000000000",
+    "evidence_hash": "sha256:712cbbbd52ce119c1dbd7e7128bbeee18bc5d8e2260ddded854767b31e5aae08"
+  }
+}
