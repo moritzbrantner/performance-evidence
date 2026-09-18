@@ -12,7 +12,7 @@ permissions:
 jobs:
   foundation:
     name: Repository foundation
-    uses: moritzbrantner/reusable-workflows/.github/workflows/coding-tooling-validation.yml@f6748408a173bab2962e5e51b5418e5c3244e348
+    uses: moritzbrantner/reusable-workflows/.github/workflows/coding-tooling-validation.yml@8669e7cad2233c0fb1e0fcc3e00a041d2b6d7b03
     with:
       operation: foundation
       install_mode: none
@@ -20,7 +20,7 @@ jobs:
 
   findings:
     name: Deterministic findings
-    uses: moritzbrantner/reusable-workflows/.github/workflows/coding-tooling-validation.yml@f6748408a173bab2962e5e51b5418e5c3244e348
+    uses: moritzbrantner/reusable-workflows/.github/workflows/coding-tooling-validation.yml@8669e7cad2233c0fb1e0fcc3e00a041d2b6d7b03
     with:
       operation: findings
       install_mode: none
@@ -28,7 +28,7 @@ jobs:
 
   contract:
     name: Repository validation
-    uses: moritzbrantner/reusable-workflows/.github/workflows/coding-tooling-validation.yml@f6748408a173bab2962e5e51b5418e5c3244e348
+    uses: moritzbrantner/reusable-workflows/.github/workflows/coding-tooling-validation.yml@8669e7cad2233c0fb1e0fcc3e00a041d2b6d7b03
     with:
       operation: run
       tier: fast

@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "id": "ci-artifact-reuse/v1",
+  "description": "Portable performance evidence for one exact-head reusable build artifact producer and its verified downstream consumption.",
+  "scenario_id": "ci/artifact-reuse",
+  "producer_adapters": [
+    "reusable-workflows/build-artifact-receipt"
+  ],
+  "measurements": [
+    {
+      "name": "ci.artifact.expected_consumers",
+      "group": "useful_work",
+      "unit": "count",
+      "measurement_type": "gauge",
+      "source": "metrics.artifactReuse.expectedConsumers"
+    },
+    {
+      "name": "ci.artifact.bytes",
+      "group": "useful_work",
+      "unit": "byte",
+      "measurement_type": "size",
+      "source": "metrics.artifactReuse.artifactBytes"
+    },
+    {
+      "name": "ci.artifact.setup_time",
+      "group": "induced_work",
+      "unit": "ms",
+      "measurement_type": "duration",
+      "source": "metrics.artifactReuse.setupMs"
+    },
+    {
+      "name": "ci.artifact.build_time",
+      "group": "induced_work",
+      "unit": "ms",
+      "measurement_type": "duration",
+      "source": "metrics.artifactReuse.buildMs"
+    },
+    {
+      "name": "ci.artifact.upload_time",
+      "group": "induced_work",
+      "unit": "ms",
+      "measurement_type": "duration",
+      "source": "metrics.artifactReuse.uploadMs"
+    },
+    {
+      "name": "ci.artifact.producer_overhead",
+      "group": "induced_work",
+      "unit": "ms",
+      "measurement_type": "duration",
+      "source": "metrics.artifactReuse.producerOverheadMs"
+    },
+    {
+      "name": "ci.artifact.estimated_avoided_build_time",
+      "group": "outcomes",
+      "unit": "ms",
+      "measurement_type": "duration",
+      "source": "metrics.artifactReuse.estimatedAvoidedBuildMs"
+    }
+  ],
+  "metadata_extension": {
+    "namespace": "ci.artifact-reuse",
+    "fields": [
+      "artifact_key",
+      "identity_digest",
+      "recommended",
+      "reason",
+      "producer_run_id",
+      "reuse_hit",
+      "consumer_count"
+    ],
+    "excluded_fields": [
+      "github_token"
+    ]
+  },
+  "provenance": {
+    "source_revision": "receipt.source.sha",
+    "workload_identity": "receipt evidence artifact-identity digest plus exact source revision",
+    "environment": "reusable-workflows build-artifact identity includes runner platform and declared runtime/tool setup",
+    "recommendation": "advisory only; correctness and release authority remain with the verified build artifact receipt"
+  }
+}
