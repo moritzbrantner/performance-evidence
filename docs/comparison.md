@@ -21,12 +21,21 @@ A zero baseline keeps the absolute delta but reports `relative_delta.status = un
 
 If the scenario as a whole is incomparable, raw measurement snapshots are still preserved for diagnosis, but all measurement deltas are unavailable.
 
+## Work amplification
+
+Amplification ratios are explicit and domain-owned. The comparator does not guess that one counter should be divided by another. Callers declare a ratio as `NAME=NUMERATOR,DENOMINATOR`, and the comparison artifact records that definition together with baseline/candidate numerator values, denominator values, and the derived ratio.
+
+The ratio remains unavailable when either source measurement is missing or changes definition across baseline/candidate. A zero denominator is reported as `undefined_zero_denominator`; a defined baseline ratio of zero keeps the absolute ratio delta but leaves its relative delta undefined.
+
+The full raw measurement comparison remains alongside every derived amplification result, so a ratio never replaces its source evidence.
+
 ## CLI
 
 ```sh
 python scripts/compare_evidence.py \
   baseline.json candidate.json \
   --expected-candidate-revision "$GITHUB_SHA" \
+  --amplification physics.body_visits_per_changed_body=physics.body_visits,physics.changed_bodies \
   --output comparison.json
 ```
 
