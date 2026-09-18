@@ -126,6 +126,14 @@ The machine-readable artifact is authoritative. Markdown reports and GitHub Page
 - [ ] Establish guidance for instruction counts, allocator evidence, hardware counters, browser traces, and wall-clock measurements.
 - [ ] Detect instrumentation effects where feasible.
 
+## Integration slice — CI artifact reuse economics
+
+- [x] Define `ci-artifact-reuse/v1` for exact-head producer setup/build/upload cost and fan-out.
+- [x] Keep artifact reuse recommendations advisory and separate from correctness/release authority.
+- [x] Map reusable-workflows build-artifact receipts into portable useful-work, induced-work, and outcome measurements.
+- [ ] Aggregate verified consumer materialization cost across downstream jobs.
+- [ ] Calibrate rollout thresholds across cheap TypeScript builds and expensive Rust/WASM builds.
+
 ## Slice 12 — Adoption and convergence
 
 Dogfood across deliberately different workloads before broad rollout:
