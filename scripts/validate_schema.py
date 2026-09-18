@@ -384,6 +384,164 @@ def validate_comparison_contract(
                 "comparison fixture output did not match fixtures/comparison/expected.json"
             )
 
+        amplification_path = Path(temporary_directory) / "amplifications.json"
+        amplification_command = [
+            sys.executable,
+            str(ROOT / "scripts" / "compare_evidence.py"),
+            str(baseline_path),
+            str(candidate_path),
+            "--expected-candidate-revision",
+            "1111111111111111111111111111111111111111",
+            "--amplification",
+            "physics.body_visits_per_changed_body=physics.body_visits,physics.changed_bodies",
+            "--amplification",
+            "memory.bytes_per_changed_body=memory.bytes_copied,physics.changed_bodies",
+            "--amplification",
+            "physics.visits_per_copied_byte=physics.body_visits,memory.bytes_copied",
+            "--amplification",
+            "cpu.instructions_per_changed_body=cpu.instructions,physics.changed_bodies",
+            "--amplification",
+            "physics.only_baseline_per_changed_body=physics.only_baseline,physics.changed_bodies",
+            "--output",
+            str(amplification_path),
+        ]
+        amplification = subprocess.run(
+            amplification_command,
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if amplification.returncode != 0:
+            failures.append(
+                "amplification comparison fixture execution failed: "
+                + (amplification.stderr.strip() or amplification.stdout.strip())
+            )
+            return failures
+
+        amplification_document = load_json(amplification_path)
+        expected_amplifications = [
+            {
+                "name": "physics.body_visits_per_changed_body",
+                "numerator": "physics.body_visits",
+                "denominator": "physics.changed_bodies",
+                "status": "comparable",
+                "baseline": {
+                    "status": "defined",
+                    "numerator_value": 126,
+                    "denominator_value": 8,
+                    "value": 15.75,
+                },
+                "candidate": {
+                    "status": "defined",
+                    "numerator_value": 100,
+                    "denominator_value": 8,
+                    "value": 12.5,
+                },
+                "absolute_delta": -3.25,
+                "relative_delta": {
+                    "status": "defined",
+                    "value": -0.20634920634920634,
+                },
+            },
+            {
+                "name": "memory.bytes_per_changed_body",
+                "numerator": "memory.bytes_copied",
+                "denominator": "physics.changed_bodies",
+                "status": "comparable",
+                "baseline": {
+                    "status": "defined",
+                    "numerator_value": 0,
+                    "denominator_value": 8,
+                    "value": 0.0,
+                },
+                "candidate": {
+                    "status": "defined",
+                    "numerator_value": 1024,
+                    "denominator_value": 8,
+                    "value": 128.0,
+                },
+                "absolute_delta": 128.0,
+                "relative_delta": {
+                    "status": "undefined_zero_baseline",
+                    "value": None,
+                },
+            },
+            {
+                "name": "physics.visits_per_copied_byte",
+                "numerator": "physics.body_visits",
+                "denominator": "memory.bytes_copied",
+                "status": "undefined_zero_denominator",
+                "baseline": {
+                    "status": "undefined_zero_denominator",
+                    "numerator_value": 126,
+                    "denominator_value": 0,
+                    "value": None,
+                },
+                "candidate": {
+                    "status": "defined",
+                    "numerator_value": 100,
+                    "denominator_value": 1024,
+                    "value": 0.09765625,
+                },
+                "absolute_delta": None,
+                "relative_delta": {
+                    "status": "unavailable",
+                    "value": None,
+                },
+            },
+            {
+                "name": "cpu.instructions_per_changed_body",
+                "numerator": "cpu.instructions",
+                "denominator": "physics.changed_bodies",
+                "status": "incompatible_definition",
+                "baseline": {
+                    "status": "incompatible_definition",
+                    "numerator_value": 1000,
+                    "denominator_value": 8,
+                    "value": None,
+                },
+                "candidate": {
+                    "status": "incompatible_definition",
+                    "numerator_value": 900,
+                    "denominator_value": 8,
+                    "value": None,
+                },
+                "absolute_delta": None,
+                "relative_delta": {
+                    "status": "unavailable",
+                    "value": None,
+                },
+            },
+            {
+                "name": "physics.only_baseline_per_changed_body",
+                "numerator": "physics.only_baseline",
+                "denominator": "physics.changed_bodies",
+                "status": "missing_measurement",
+                "baseline": {
+                    "status": "defined",
+                    "numerator_value": 10,
+                    "denominator_value": 8,
+                    "value": 1.25,
+                },
+                "candidate": {
+                    "status": "missing_numerator",
+                    "numerator_value": None,
+                    "denominator_value": 8,
+                    "value": None,
+                },
+                "absolute_delta": None,
+                "relative_delta": {
+                    "status": "unavailable",
+                    "value": None,
+                },
+            },
+        ]
+        if amplification_document.get("amplifications") != expected_amplifications:
+            failures.append("work amplification fixture produced unexpected ratios")
+        if amplification_document["measurements"] != expected["measurements"]:
+            failures.append("work amplification derivation changed raw measurement comparisons")
+
         mismatch_path = Path(temporary_directory) / "mismatch.json"
         mismatch_command = [
             sys.executable,
