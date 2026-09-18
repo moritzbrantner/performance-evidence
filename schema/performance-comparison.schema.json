@@ -34,6 +34,12 @@
       "items": {
         "$ref": "#/$defs/measurementComparison"
       }
+    },
+    "amplifications": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/amplificationComparison"
+      }
     }
   },
   "$defs": {
@@ -219,6 +225,100 @@
               "type": "null"
             }
           ]
+        },
+        "absolute_delta": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "relative_delta": {
+          "$ref": "#/$defs/relativeDelta"
+        }
+      }
+    },
+    "ratioSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "numerator_value",
+        "denominator_value",
+        "value"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "defined",
+            "missing_numerator",
+            "missing_denominator",
+            "undefined_zero_denominator",
+            "incompatible_definition",
+            "scenario_incomparable"
+          ]
+        },
+        "numerator_value": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "denominator_value": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "value": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      }
+    },
+    "amplificationComparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "numerator",
+        "denominator",
+        "status",
+        "baseline",
+        "candidate",
+        "absolute_delta",
+        "relative_delta"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "numerator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "denominator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": [
+            "comparable",
+            "scenario_incomparable",
+            "missing_measurement",
+            "incompatible_definition",
+            "undefined_zero_denominator"
+          ]
+        },
+        "baseline": {
+          "$ref": "#/$defs/ratioSnapshot"
+        },
+        "candidate": {
+          "$ref": "#/$defs/ratioSnapshot"
         },
         "absolute_delta": {
           "type": [
