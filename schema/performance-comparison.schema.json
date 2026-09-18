@@ -1,0 +1,235 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://moritzbrantner.github.io/performance-evidence/schema/performance-comparison.schema.json",
+  "title": "Performance Evidence Comparison",
+  "description": "Portable comparison of one candidate Performance Evidence artifact against one baseline artifact.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "candidate",
+    "baseline",
+    "comparability",
+    "measurements"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "kind": {
+      "const": "performance-evidence/comparison"
+    },
+    "candidate": {
+      "$ref": "#/$defs/evidenceIdentity"
+    },
+    "baseline": {
+      "$ref": "#/$defs/evidenceIdentity"
+    },
+    "comparability": {
+      "$ref": "#/$defs/comparability"
+    },
+    "measurements": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/measurementComparison"
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "evidenceIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_hash",
+        "source_revision",
+        "dirty",
+        "scenario_id",
+        "workload_id",
+        "workload_hash",
+        "environment_fingerprint"
+      ],
+      "properties": {
+        "evidence_hash": {
+          "$ref": "#/$defs/sha256"
+        },
+        "source_revision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dirty": {
+          "type": "boolean"
+        },
+        "scenario_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workload_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workload_hash": {
+          "$ref": "#/$defs/sha256"
+        },
+        "environment_fingerprint": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "comparability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "reasons"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "comparable",
+            "incomparable"
+          ]
+        },
+        "reasons": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "candidate_dirty",
+              "baseline_dirty",
+              "candidate_revision_mismatch",
+              "scenario_mismatch",
+              "workload_mismatch",
+              "environment_mismatch",
+              "declared_baseline_mismatch"
+            ]
+          }
+        },
+        "expected_candidate_revision": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "measurementSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "group",
+        "unit",
+        "measurement_type",
+        "value"
+      ],
+      "properties": {
+        "group": {
+          "enum": [
+            "useful_work",
+            "induced_work",
+            "outcomes"
+          ]
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "measurement_type": {
+          "enum": [
+            "counter",
+            "gauge",
+            "duration",
+            "size",
+            "rate",
+            "ratio"
+          ]
+        },
+        "value": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "relativeDelta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "value"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "defined",
+            "undefined_zero_baseline",
+            "unavailable"
+          ]
+        },
+        "value": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      }
+    },
+    "measurementComparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "status",
+        "baseline",
+        "candidate",
+        "absolute_delta",
+        "relative_delta"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": [
+            "comparable",
+            "missing_baseline",
+            "missing_candidate",
+            "incompatible_definition",
+            "scenario_incomparable"
+          ]
+        },
+        "baseline": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/measurementSnapshot"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "candidate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/measurementSnapshot"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "absolute_delta": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "relative_delta": {
+          "$ref": "#/$defs/relativeDelta"
+        }
+      }
+    }
+  }
+}
