@@ -108,6 +108,182 @@ def unavailable_relative_delta() -> dict[str, Any]:
     return {"status": "unavailable", "value": None}
 
 
+def parse_amplification_spec(value: str) -> tuple[str, str, str]:
+    try:
+        name, operands = value.split("=", 1)
+        numerator, denominator = operands.split(",", 1)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(
+            "amplification must use NAME=NUMERATOR,DENOMINATOR"
+        ) from error
+
+    if not name or not numerator or not denominator:
+        raise argparse.ArgumentTypeError(
+            "amplification name, numerator, and denominator must be non-empty"
+        )
+    return name, numerator, denominator
+
+
+def ratio_snapshot(
+    measurements: dict[str, dict[str, Any]],
+    numerator: str,
+    denominator: str,
+    *,
+    blocked_status: str | None = None,
+) -> dict[str, Any]:
+    numerator_measurement = measurements.get(numerator)
+    denominator_measurement = measurements.get(denominator)
+    numerator_value = (
+        None if numerator_measurement is None else numerator_measurement["value"]
+    )
+    denominator_value = (
+        None if denominator_measurement is None else denominator_measurement["value"]
+    )
+
+    if blocked_status is not None:
+        return {
+            "status": blocked_status,
+            "numerator_value": numerator_value,
+            "denominator_value": denominator_value,
+            "value": None,
+        }
+    if numerator_measurement is None:
+        return {
+            "status": "missing_numerator",
+            "numerator_value": None,
+            "denominator_value": denominator_value,
+            "value": None,
+        }
+    if denominator_measurement is None:
+        return {
+            "status": "missing_denominator",
+            "numerator_value": numerator_value,
+            "denominator_value": None,
+            "value": None,
+        }
+    if denominator_value == 0:
+        return {
+            "status": "undefined_zero_denominator",
+            "numerator_value": numerator_value,
+            "denominator_value": denominator_value,
+            "value": None,
+        }
+    return {
+        "status": "defined",
+        "numerator_value": numerator_value,
+        "denominator_value": denominator_value,
+        "value": numerator_value / denominator_value,
+    }
+
+
+def compare_amplification(
+    name: str,
+    numerator: str,
+    denominator: str,
+    baseline_measurements: dict[str, dict[str, Any]],
+    candidate_measurements: dict[str, dict[str, Any]],
+    measurement_comparisons: dict[str, dict[str, Any]],
+    scenario_comparable: bool,
+) -> dict[str, Any]:
+    result: dict[str, Any] = {
+        "name": name,
+        "numerator": numerator,
+        "denominator": denominator,
+        "status": "scenario_incomparable",
+        "baseline": ratio_snapshot(
+            baseline_measurements,
+            numerator,
+            denominator,
+            blocked_status="scenario_incomparable",
+        ),
+        "candidate": ratio_snapshot(
+            candidate_measurements,
+            numerator,
+            denominator,
+            blocked_status="scenario_incomparable",
+        ),
+        "absolute_delta": None,
+        "relative_delta": unavailable_relative_delta(),
+    }
+
+    if not scenario_comparable:
+        return result
+
+    input_comparisons = [
+        measurement_comparisons.get(numerator),
+        measurement_comparisons.get(denominator),
+    ]
+    if any(entry is None for entry in input_comparisons) or any(
+        entry["status"] in {"missing_baseline", "missing_candidate"}
+        for entry in input_comparisons
+        if entry is not None
+    ):
+        result["status"] = "missing_measurement"
+        result["baseline"] = ratio_snapshot(
+            baseline_measurements, numerator, denominator
+        )
+        result["candidate"] = ratio_snapshot(
+            candidate_measurements, numerator, denominator
+        )
+        return result
+
+    if any(
+        entry["status"] == "incompatible_definition"
+        for entry in input_comparisons
+        if entry is not None
+    ):
+        result["status"] = "incompatible_definition"
+        result["baseline"] = ratio_snapshot(
+            baseline_measurements,
+            numerator,
+            denominator,
+            blocked_status="incompatible_definition",
+        )
+        result["candidate"] = ratio_snapshot(
+            candidate_measurements,
+            numerator,
+            denominator,
+            blocked_status="incompatible_definition",
+        )
+        return result
+
+    result["baseline"] = ratio_snapshot(
+        baseline_measurements, numerator, denominator
+    )
+    result["candidate"] = ratio_snapshot(
+        candidate_measurements, numerator, denominator
+    )
+    if (
+        result["baseline"]["status"] == "undefined_zero_denominator"
+        or result["candidate"]["status"] == "undefined_zero_denominator"
+    ):
+        result["status"] = "undefined_zero_denominator"
+        return result
+
+    if (
+        result["baseline"]["status"] != "defined"
+        or result["candidate"]["status"] != "defined"
+    ):
+        result["status"] = "missing_measurement"
+        return result
+
+    baseline_value = result["baseline"]["value"]
+    candidate_value = result["candidate"]["value"]
+    result["status"] = "comparable"
+    result["absolute_delta"] = candidate_value - baseline_value
+    if baseline_value == 0:
+        result["relative_delta"] = {
+            "status": "undefined_zero_baseline",
+            "value": None,
+        }
+    else:
+        result["relative_delta"] = {
+            "status": "defined",
+            "value": (candidate_value - baseline_value) / baseline_value,
+        }
+    return result
+
+
 def compare_measurement(
     name: str,
     baseline: dict[str, Any] | None,
@@ -158,6 +334,7 @@ def compare_documents(
     baseline_path: Path,
     candidate_path: Path,
     expected_candidate_revision: str | None = None,
+    amplification_specs: list[tuple[str, str, str]] | None = None,
 ) -> dict[str, Any]:
     baseline = validate_evidence(baseline_path)
     candidate = validate_evidence(candidate_path)
@@ -174,6 +351,23 @@ def compare_documents(
     baseline_measurements = measurement_index(baseline)
     candidate_measurements = measurement_index(candidate)
     names = sorted(set(baseline_measurements) | set(candidate_measurements))
+    measurement_entries = [
+        compare_measurement(
+            name,
+            baseline_measurements.get(name),
+            candidate_measurements.get(name),
+            scenario_comparable,
+        )
+        for name in names
+    ]
+    measurement_comparisons = {
+        entry["name"]: entry for entry in measurement_entries
+    }
+
+    specs = amplification_specs or []
+    amplification_names = [name for name, _, _ in specs]
+    if len(amplification_names) != len(set(amplification_names)):
+        raise ValueError("amplification names must be unique")
 
     comparability: dict[str, Any] = {
         "status": "comparable" if scenario_comparable else "incomparable",
@@ -188,16 +382,21 @@ def compare_documents(
         "candidate": evidence_identity(candidate_path, candidate),
         "baseline": evidence_identity(baseline_path, baseline),
         "comparability": comparability,
-        "measurements": [
-            compare_measurement(
+        "measurements": measurement_entries,
+    }
+    if specs:
+        comparison["amplifications"] = [
+            compare_amplification(
                 name,
-                baseline_measurements.get(name),
-                candidate_measurements.get(name),
+                numerator,
+                denominator,
+                baseline_measurements,
+                candidate_measurements,
+                measurement_comparisons,
                 scenario_comparable,
             )
-            for name in names
-        ],
-    }
+            for name, numerator, denominator in specs
+        ]
 
     comparison_schema = load_json(COMPARISON_SCHEMA_PATH)
     Draft202012Validator.check_schema(comparison_schema)
@@ -230,6 +429,17 @@ def parse_args() -> argparse.Namespace:
         "--expected-candidate-revision",
         help="Optional reviewed head SHA/revision that the candidate evidence must match.",
     )
+    parser.add_argument(
+        "--amplification",
+        action="append",
+        default=[],
+        type=parse_amplification_spec,
+        metavar="NAME=NUMERATOR,DENOMINATOR",
+        help=(
+            "Explicit domain-owned amplification ratio to derive. "
+            "May be supplied more than once."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -240,6 +450,7 @@ def main() -> int:
             args.baseline,
             args.candidate,
             args.expected_candidate_revision,
+            args.amplification,
         )
     except (OSError, ValueError, RuntimeError) as error:
         print(f"Performance Evidence comparison failed: {error}", file=sys.stderr)
