@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0.0",
+  "scenario": {
+    "id": "physics/resting-stack-100",
+    "description": "Advance a deterministic resting stack after a small state change.",
+    "workload": {
+      "id": "resting-stack-100",
+      "hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "seed": 42,
+      "parameters": {
+        "body_count": 100,
+        "steps": 120
+      }
+    }
+  },
+  "source": {
+    "repository": "https://github.com/example/physics-engine",
+    "revision": "1111111111111111111111111111111111111111",
+    "dirty": false
+  },
+  "environment": {
+    "fingerprint": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "platform": {
+      "os": "linux",
+      "arch": "x86_64"
+    },
+    "toolchain": {
+      "rustc": "1.98.0"
+    },
+    "collector": {
+      "name": "physics-fixture",
+      "version": "1.0.0"
+    }
+  },
+  "measurements": {
+    "useful_work": [
+      {
+        "name": "physics.changed_bodies",
+        "value": 8,
+        "unit": "count",
+        "measurement_type": "counter"
+      }
+    ],
+    "induced_work": [
+      {
+        "name": "physics.body_visits",
+        "value": 100,
+        "unit": "count",
+        "measurement_type": "counter"
+      }
+    ],
+    "outcomes": [
+      {
+        "name": "time.elapsed",
+        "value": 500000,
+        "unit": "ns",
+        "measurement_type": "duration"
+      }
+    ]
+  }
+}
