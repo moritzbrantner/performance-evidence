@@ -1,0 +1,45 @@
+{
+  "dhatFileVersion": 2,
+  "mode": "heap",
+  "verb": "Allocated",
+  "bklt": true,
+  "bkacc": true,
+  "tu": "instr",
+  "Mtu": "Minstr",
+  "tuth": 500,
+  "cmd": "target/release/physics-engine resting-stack",
+  "pid": 1234,
+  "tg": 7000,
+  "te": 10000,
+  "pps": [
+    {
+      "tb": 1000,
+      "tbk": 10,
+      "tl": 20000,
+      "mb": 400,
+      "mbk": 4,
+      "gb": 300,
+      "gbk": 3,
+      "eb": 100,
+      "ebk": 1,
+      "rb": 2000,
+      "wb": 1500,
+      "fs": []
+    },
+    {
+      "tb": 500,
+      "tbk": 5,
+      "tl": 7000,
+      "mb": 250,
+      "mbk": 2,
+      "gb": 200,
+      "gbk": 2,
+      "eb": 0,
+      "ebk": 0,
+      "rb": 1000,
+      "wb": 500,
+      "fs": []
+    }
+  ],
+  "ftbl": []
+}
