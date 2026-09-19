@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0.0",
+  "id": "physics/resting-stack-budget-v1",
+  "description": "Exercise deterministic hard gates while keeping elapsed-time observations advisory.",
+  "execution": {
+    "require_exact_head": true,
+    "automatic_retries": 0
+  },
+  "rules": [
+    {
+      "id": "body-visits-no-regression",
+      "target": {
+        "kind": "measurement",
+        "name": "physics.body_visits"
+      },
+      "mode": "hard",
+      "assertion": {
+        "kind": "relative_regression_max",
+        "maximum": 0
+      }
+    },
+    {
+      "id": "body-visits-amplification-no-regression",
+      "target": {
+        "kind": "amplification",
+        "name": "physics.body_visits_per_changed_body"
+      },
+      "mode": "hard",
+      "assertion": {
+        "kind": "relative_regression_max",
+        "maximum": 0
+      }
+    },
+    {
+      "id": "copied-bytes-cap",
+      "target": {
+        "kind": "measurement",
+        "name": "memory.bytes_copied"
+      },
+      "mode": "hard",
+      "assertion": {
+        "kind": "candidate_max",
+        "maximum": 2048
+      }
+    },
+    {
+      "id": "elapsed-time-information",
+      "target": {
+        "kind": "measurement",
+        "name": "time.elapsed"
+      },
+      "mode": "informational",
+      "assertion": {
+        "kind": "candidate_max",
+        "maximum": 400000
+      }
+    },
+    {
+      "id": "elapsed-time-calibration",
+      "target": {
+        "kind": "measurement",
+        "name": "time.elapsed"
+      },
+      "mode": "calibration",
+      "assertion": {
+        "kind": "candidate_max",
+        "maximum": 450000
+      }
+    }
+  ]
+}
