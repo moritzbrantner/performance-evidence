@@ -764,6 +764,7 @@ def validate_budget_contract(
         ):
             failures.append("zero-baseline relative hard budget did not remain unavailable")
 
+        original_comparison_path = comparison_path
         mismatch_path = temporary_root / "mismatch-comparison.json"
         mismatch_command = [
             sys.executable,
@@ -788,7 +789,6 @@ def validate_budget_contract(
                 + (mismatch.stderr.strip() or mismatch.stdout.strip())
             )
         else:
-            original_comparison_path = comparison_path
             comparison_path = mismatch_path
             mismatched = evaluate("mismatched-head", policies["pass"], 2)
             comparison_path = original_comparison_path
