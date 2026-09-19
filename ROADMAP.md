@@ -69,7 +69,7 @@ The machine-readable artifact is authoritative. Markdown reports and GitHub Page
 
 ## Slice 4 — Rust adapter
 
-- [ ] Add an adapter path for deterministic instruction/cache/call evidence (for example Callgrind/iai-callgrind output).
+- [x] Add an adapter path for deterministic instruction/cache/call evidence (for example Callgrind/iai-callgrind output).
 - [ ] Add allocation evidence and copy profiling where available (for example DHAT-style evidence).
 - [ ] Provide lightweight application counters for traversals, materializations, snapshots, recomputations, and bytes moved.
 - [ ] Ensure instrumentation can be disabled without changing program semantics.

@@ -1,0 +1,153 @@
+{
+  "artifacts": [
+    {
+      "kind": "callgrind",
+      "media_type": "application/vnd.valgrind.callgrind",
+      "path": "callgrind.out",
+      "sha256": "sha256:281e990e1c37a2235ef4a9a0509009771a95db4d0d7164f0d69703fd3eb3fc8e"
+    }
+  ],
+  "environment": {
+    "collector": {
+      "name": "performance-evidence.rust-callgrind-adapter",
+      "version": "1.0.0"
+    },
+    "fingerprint": "sha256:9610f8d904e8f5b27ccd63c91f4f134227676a26a946499ae7738d00f6e40bc3",
+    "platform": {
+      "arch": "x86_64",
+      "os": "linux"
+    },
+    "toolchain": {
+      "callgrind": "callgrind-3.22.0",
+      "rustc": "1.98.0",
+      "upstream_collector": "physics-fixture@1.0.0"
+    }
+  },
+  "extensions": {
+    "rust.callgrind": {
+      "adapter_contract": "rust-callgrind/v1",
+      "calls_directives": 2,
+      "creator": "callgrind-3.22.0",
+      "events": [
+        "Ir",
+        "Dr",
+        "Dw",
+        "I1mr",
+        "D1mr",
+        "D1mw",
+        "ILmr",
+        "DLmr",
+        "DLmw",
+        "Bc"
+      ],
+      "unmapped_events": [
+        "Bc"
+      ]
+    }
+  },
+  "measurements": {
+    "induced_work": [
+      {
+        "measurement_type": "counter",
+        "name": "physics.body_visits",
+        "unit": "count",
+        "value": 100
+      },
+      {
+        "measurement_type": "counter",
+        "name": "cpu.instructions",
+        "unit": "instruction",
+        "value": 1000
+      },
+      {
+        "measurement_type": "counter",
+        "name": "memory.data_reads",
+        "unit": "count",
+        "value": 200
+      },
+      {
+        "measurement_type": "counter",
+        "name": "memory.data_writes",
+        "unit": "count",
+        "value": 100
+      },
+      {
+        "measurement_type": "counter",
+        "name": "cache.l1_instruction_read_misses",
+        "unit": "count",
+        "value": 10
+      },
+      {
+        "measurement_type": "counter",
+        "name": "cache.l1_data_read_misses",
+        "unit": "count",
+        "value": 20
+      },
+      {
+        "measurement_type": "counter",
+        "name": "cache.l1_data_write_misses",
+        "unit": "count",
+        "value": 5
+      },
+      {
+        "measurement_type": "counter",
+        "name": "cache.last_level_instruction_read_misses",
+        "unit": "count",
+        "value": 2
+      },
+      {
+        "measurement_type": "counter",
+        "name": "cache.last_level_data_read_misses",
+        "unit": "count",
+        "value": 3
+      },
+      {
+        "measurement_type": "counter",
+        "name": "cache.last_level_data_write_misses",
+        "unit": "count",
+        "value": 1
+      },
+      {
+        "measurement_type": "counter",
+        "name": "cpu.calls",
+        "unit": "count",
+        "value": 10
+      }
+    ],
+    "outcomes": [
+      {
+        "measurement_type": "duration",
+        "name": "time.elapsed",
+        "unit": "ns",
+        "value": 500000
+      }
+    ],
+    "useful_work": [
+      {
+        "measurement_type": "counter",
+        "name": "physics.changed_bodies",
+        "unit": "count",
+        "value": 8
+      }
+    ]
+  },
+  "scenario": {
+    "description": "Advance a deterministic resting stack after a small state change.",
+    "id": "physics/resting-stack-100",
+    "workload": {
+      "hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "id": "resting-stack-100",
+      "parameters": {
+        "body_count": 100,
+        "steps": 120
+      },
+      "seed": 42
+    }
+  },
+  "schema_version": "1.0.0",
+  "source": {
+    "dirty": false,
+    "repository": "https://github.com/example/physics-engine",
+    "revision": "1111111111111111111111111111111111111111"
+  }
+}

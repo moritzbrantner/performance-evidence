@@ -1,0 +1,7 @@
+version: 1
+creator: callgrind-3.22.0
+positions: line
+events: Ir Dr Dw I1mr D1mr D1mw ILmr DLmr DLmw Bc
+summary: 1000 200 100 10 20 5 2 3 1 77
+calls=4 0
+calls=6 0
