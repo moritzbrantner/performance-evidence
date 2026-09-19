@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "id": "physics/resting-stack-hard-failure-v1",
+  "execution": {
+    "require_exact_head": true,
+    "automatic_retries": 0
+  },
+  "rules": [
+    {
+      "id": "body-visits-cap",
+      "target": {
+        "kind": "measurement",
+        "name": "physics.body_visits"
+      },
+      "mode": "hard",
+      "assertion": {
+        "kind": "candidate_max",
+        "maximum": 90
+      }
+    }
+  ]
+}
