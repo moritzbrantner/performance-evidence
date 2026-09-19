@@ -67,4 +67,6 @@ CI artifact producers can use the [`ci-artifact-reuse/v1` profile](docs/ci-artif
 
 Rust repositories can enrich canonical evidence with deterministic instruction/cache/call measurements using the [`rust-callgrind/v1` adapter](docs/rust-callgrind-adapter.md). The adapter preserves repository-owned scenario and semantic-counter authority and links the raw Callgrind artifact by hash.
 
+Allocation and copy profiling can use the [`dhat/v1` adapter](docs/dhat-adapter.md). It supports Valgrind DHAT heap/copy output and Rust DHAT heap output, preserving unavailable profiler fields as missing evidence rather than manufactured zeroes.
+
 See [ROADMAP.md](ROADMAP.md) for the planned slices.
