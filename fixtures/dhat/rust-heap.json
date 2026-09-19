@@ -1,0 +1,29 @@
+{
+  "dhatFileVersion": 2,
+  "mode": "rust-heap",
+  "verb": "Allocated",
+  "bklt": true,
+  "bkacc": false,
+  "tu": "µs",
+  "Mtu": "s",
+  "tuth": 10,
+  "cmd": "target/release/physics-engine resting-stack",
+  "pid": 1234,
+  "tg": 700,
+  "te": 1000,
+  "pps": [
+    {
+      "tb": 1024,
+      "tbk": 8,
+      "tl": 5000,
+      "mb": 512,
+      "mbk": 4,
+      "gb": 384,
+      "gbk": 3,
+      "eb": 64,
+      "ebk": 1,
+      "fs": []
+    }
+  ],
+  "ftbl": []
+}
