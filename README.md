@@ -71,4 +71,6 @@ Allocation and copy profiling can use the [`dhat/v1` adapter](docs/dhat-adapter.
 
 Repository-owned traversals, materializations, snapshots, recomputations, bytes moved, and similar semantic work can be attached with the [`application-counters/v1` bridge](docs/application-counters.md). The bridge accepts canonical measurement fragments rather than defining a parallel counter vocabulary.
 
+The canonical contract is dogfooded by [physics-engine](docs/adoption-physics-engine.md), which emits deterministic sandbox/browser evidence with repository-owned solver counters and validates the bundle against an exact pinned Performance Evidence revision.
+
 See [ROADMAP.md](ROADMAP.md) for the planned slices.
