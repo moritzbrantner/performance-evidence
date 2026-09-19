@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+import sys
 import tempfile
 from pathlib import Path
 
@@ -130,7 +131,7 @@ def main() -> int:
                 raise ValueError("portable artifact-path override was not preserved")
 
     except (OSError, ValueError, json.JSONDecodeError) as error:
-        print(f"Rust Callgrind adapter validation failed: {error}", file=__import__("sys").stderr)
+        print(f"Rust Callgrind adapter validation failed: {error}", file=sys.stderr)
         return 1
 
     print("Rust Callgrind adapter validation passed.")
