@@ -1,0 +1,28 @@
+{
+  "dhatFileVersion": 2,
+  "mode": "copy",
+  "verb": "Copied",
+  "bklt": false,
+  "bkacc": false,
+  "bu": "byte",
+  "bsu": "bytes",
+  "bksu": "copy operations",
+  "tu": "instr",
+  "Mtu": "Minstr",
+  "cmd": "target/release/physics-engine copy-scenario",
+  "pid": 1234,
+  "te": 10000,
+  "pps": [
+    {
+      "tb": 4096,
+      "tbk": 12,
+      "fs": []
+    },
+    {
+      "tb": 1024,
+      "tbk": 4,
+      "fs": []
+    }
+  ],
+  "ftbl": []
+}
