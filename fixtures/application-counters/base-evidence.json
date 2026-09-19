@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "scenario": {
+    "id": "simulation/incremental-update",
+    "workload": {
+      "id": "incremental-update-v1",
+      "hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "seed": 42
+    }
+  },
+  "source": {
+    "repository": "https://github.com/example/simulation",
+    "revision": "1111111111111111111111111111111111111111",
+    "dirty": false
+  },
+  "environment": {
+    "fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "collector": {
+      "name": "simulation-scenario",
+      "version": "1.0.0"
+    }
+  },
+  "measurements": {
+    "useful_work": [],
+    "induced_work": [],
+    "outcomes": [
+      {
+        "name": "time.elapsed",
+        "value": 100000,
+        "unit": "ns",
+        "measurement_type": "duration"
+      }
+    ]
+  }
+}

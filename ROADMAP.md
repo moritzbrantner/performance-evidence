@@ -71,7 +71,7 @@ The machine-readable artifact is authoritative. Markdown reports and GitHub Page
 
 - [x] Add an adapter path for deterministic instruction/cache/call evidence (for example Callgrind/iai-callgrind output).
 - [x] Add allocation evidence and copy profiling where available (for example DHAT-style evidence).
-- [ ] Provide lightweight application counters for traversals, materializations, snapshots, recomputations, and bytes moved.
+- [x] Provide lightweight application counters for traversals, materializations, snapshots, recomputations, and bytes moved.
 - [ ] Ensure instrumentation can be disabled without changing program semantics.
 - [ ] Dogfood on a simulation/engine hot path that previously suffered from unnecessary copies/materialization.
 

@@ -1,0 +1,43 @@
+{
+  "useful_work": [
+    {
+      "name": "simulation.state_changes",
+      "value": 3,
+      "unit": "count",
+      "measurement_type": "counter"
+    }
+  ],
+  "induced_work": [
+    {
+      "name": "simulation.entity_visits",
+      "value": 120,
+      "unit": "count",
+      "measurement_type": "counter"
+    },
+    {
+      "name": "data.materializations",
+      "value": 4,
+      "unit": "count",
+      "measurement_type": "counter"
+    },
+    {
+      "name": "state.snapshots",
+      "value": 1,
+      "unit": "count",
+      "measurement_type": "counter"
+    },
+    {
+      "name": "state.recomputations",
+      "value": 2,
+      "unit": "count",
+      "measurement_type": "counter"
+    },
+    {
+      "name": "memory.bytes_moved",
+      "value": 8192,
+      "unit": "byte",
+      "measurement_type": "size"
+    }
+  ],
+  "outcomes": []
+}

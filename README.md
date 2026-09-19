@@ -69,4 +69,6 @@ Rust repositories can enrich canonical evidence with deterministic instruction/c
 
 Allocation and copy profiling can use the [`dhat/v1` adapter](docs/dhat-adapter.md). It supports Valgrind DHAT heap/copy output and Rust DHAT heap output, preserving unavailable profiler fields as missing evidence rather than manufactured zeroes.
 
+Repository-owned traversals, materializations, snapshots, recomputations, bytes moved, and similar semantic work can be attached with the [`application-counters/v1` bridge](docs/application-counters.md). The bridge accepts canonical measurement fragments rather than defining a parallel counter vocabulary.
+
 See [ROADMAP.md](ROADMAP.md) for the planned slices.
