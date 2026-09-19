@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "id": "physics/resting-stack-hard-timing-v1",
+  "execution": {
+    "require_exact_head": true,
+    "automatic_retries": 0
+  },
+  "rules": [
+    {
+      "id": "elapsed-time-hard-gate",
+      "target": {
+        "kind": "measurement",
+        "name": "time.elapsed"
+      },
+      "mode": "hard",
+      "assertion": {
+        "kind": "candidate_max",
+        "maximum": 600000
+      }
+    }
+  ]
+}

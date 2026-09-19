@@ -35,7 +35,7 @@ Examples include:
 
 ## Contract
 
-The first implementation slice establishes the versioned JSON contract in [`schema/performance-evidence.schema.json`](schema/performance-evidence.schema.json). Measurement profiles are separately validated by [`schema/measurement-profile.schema.json`](schema/measurement-profile.schema.json). Exact-head/baseline comparisons use [`schema/performance-comparison.schema.json`](schema/performance-comparison.schema.json) and preserve the original evidence artifacts as the measurement authority. See [`docs/contract.md`](docs/contract.md) and [`docs/comparison.md`](docs/comparison.md).
+The first implementation slice establishes the versioned JSON contract in [`schema/performance-evidence.schema.json`](schema/performance-evidence.schema.json). Measurement profiles are separately validated by [`schema/measurement-profile.schema.json`](schema/measurement-profile.schema.json). Exact-head/baseline comparisons use [`schema/performance-comparison.schema.json`](schema/performance-comparison.schema.json) and preserve the original evidence artifacts as the measurement authority. Portable CI budgets use [`schema/performance-budget-policy.schema.json`](schema/performance-budget-policy.schema.json) and produce [`performance-evidence/budget-evaluation`](schema/performance-budget-evaluation.schema.json) artifacts. See [`docs/contract.md`](docs/contract.md), [`docs/comparison.md`](docs/comparison.md), and [`docs/budgets.md`](docs/budgets.md).
 
 Validate it locally with:
 

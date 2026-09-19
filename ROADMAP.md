@@ -60,12 +60,12 @@ The machine-readable artifact is authoritative. Markdown reports and GitHub Page
 
 ## Slice 3 — Budgets and CI policy
 
-- [ ] Define deterministic work budgets independently from noisy wall-clock budgets.
-- [ ] Support hard regression gates, informational thresholds, and calibration-only metrics.
-- [ ] Require comparable scenario/workload provenance before applying a budget.
-- [ ] Fail closed on malformed or mismatched authoritative evidence.
-- [ ] Support non-retrying exact-head validation.
-- [ ] Keep correctness tests separate from performance evidence and budgets.
+- [x] Define deterministic work budgets independently from noisy wall-clock budgets.
+- [x] Support hard regression gates, informational thresholds, and calibration-only metrics.
+- [x] Require comparable scenario/workload provenance before applying a budget.
+- [x] Fail closed on malformed or mismatched authoritative evidence.
+- [x] Support non-retrying exact-head validation.
+- [x] Keep correctness tests separate from performance evidence and budgets.
 
 ## Slice 4 — Rust adapter
 

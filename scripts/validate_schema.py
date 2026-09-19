@@ -21,8 +21,11 @@ ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / "schema" / "performance-evidence.schema.json"
 PROFILE_SCHEMA_PATH = ROOT / "schema" / "measurement-profile.schema.json"
 COMPARISON_SCHEMA_PATH = ROOT / "schema" / "performance-comparison.schema.json"
+BUDGET_POLICY_SCHEMA_PATH = ROOT / "schema" / "performance-budget-policy.schema.json"
+BUDGET_EVALUATION_SCHEMA_PATH = ROOT / "schema" / "performance-budget-evaluation.schema.json"
 PROFILES = ROOT / "profiles"
 COMPARISON_FIXTURES = ROOT / "fixtures" / "comparison"
+BUDGET_FIXTURES = ROOT / "fixtures" / "budget"
 VALID_FIXTURES = ROOT / "fixtures" / "valid"
 INVALID_FIXTURES = ROOT / "fixtures" / "invalid"
 MEASUREMENT_GROUPS = ("useful_work", "induced_work", "outcomes")
@@ -160,7 +163,7 @@ def environment_evidence() -> dict[str, Any]:
     }
     collector = {
         "name": "performance-evidence.contract-validator",
-        "version": "1.1.0",
+        "version": "1.2.0",
     }
     fingerprint_payload = json.dumps(
         {
@@ -197,12 +200,17 @@ def build_dogfood_evidence(
 ) -> dict[str, Any]:
     revision, dirty = source_state()
     comparison_paths = sorted(COMPARISON_FIXTURES.glob("*.json"))
+    budget_paths = sorted(BUDGET_FIXTURES.glob("*.json"))
     workload_paths = [
         SCHEMA_PATH,
         PROFILE_SCHEMA_PATH,
         COMPARISON_SCHEMA_PATH,
+        BUDGET_POLICY_SCHEMA_PATH,
+        BUDGET_EVALUATION_SCHEMA_PATH,
         ROOT / "scripts" / "compare_evidence.py",
+        ROOT / "scripts" / "evaluate_budget.py",
         *comparison_paths,
+        *budget_paths,
         *profile_paths,
         *valid_paths,
         *invalid_paths,
@@ -221,6 +229,7 @@ def build_dogfood_evidence(
                     "profiles": len(profile_paths),
                     "valid_fixtures": len(valid_paths),
                     "invalid_fixtures": len(invalid_paths),
+                    "budget_policies": len(budget_paths),
                 },
             },
         },
@@ -252,12 +261,21 @@ def build_dogfood_evidence(
                     1,
                     "Comparison contract and deterministic comparison fixture verified.",
                 ),
+                measurement(
+                    "budget_contracts_verified",
+                    1,
+                    "Budget policy/evaluation contracts and deterministic CI semantics verified.",
+                ),
             ],
             "induced_work": [
                 measurement(
                     "json_documents_loaded",
-                    fixture_count + len(profile_paths) + len(comparison_paths) + 3,
-                    "Schemas, profiles, and fixture JSON documents loaded for the scenario.",
+                    fixture_count
+                    + len(profile_paths)
+                    + len(comparison_paths)
+                    + len(budget_paths)
+                    + 5,
+                    "Schemas, profiles, policies, and fixture JSON documents loaded for the scenario.",
                 ),
                 measurement(
                     "profile_validations",
@@ -273,6 +291,11 @@ def build_dogfood_evidence(
                     "comparison_fixture_validations",
                     len(comparison_paths),
                     "Comparison inputs and expected output checked for deterministic semantics.",
+                ),
+                measurement(
+                    "budget_fixture_validations",
+                    len(budget_paths),
+                    "Budget policies exercised across pass, failure, and blocked CI semantics.",
                 ),
                 measurement(
                     "measurement_entries_examined",
@@ -589,19 +612,243 @@ def validate_comparison_contract(
     return failures
 
 
+
+def validate_budget_contract(
+    policy_validator: Draft202012Validator,
+    evaluation_validator: Draft202012Validator,
+) -> list[str]:
+    failures: list[str] = []
+    baseline_path = COMPARISON_FIXTURES / "baseline.json"
+    candidate_path = COMPARISON_FIXTURES / "candidate.json"
+    policies = {
+        "pass": BUDGET_FIXTURES / "policy-pass.json",
+        "fail": BUDGET_FIXTURES / "policy-fail.json",
+        "hard_timing": BUDGET_FIXTURES / "policy-hard-timing.json",
+        "zero_baseline": BUDGET_FIXTURES / "policy-zero-baseline-relative.json",
+    }
+
+    for label, path in policies.items():
+        if not path.is_file():
+            failures.append(f"missing budget fixture {path.relative_to(ROOT)}")
+            continue
+        errors = sorted(
+            policy_validator.iter_errors(load_json(path)),
+            key=lambda error: tuple(str(part) for part in error.absolute_path),
+        )
+        if errors:
+            failures.append(
+                f"budget fixture {label} was rejected:\n  - "
+                + "\n  - ".join(
+                    f"{format_path(list(error.absolute_path))}: {error.message}"
+                    for error in errors
+                )
+            )
+    if failures:
+        return failures
+
+    with tempfile.TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        comparison_path = temporary_root / "comparison.json"
+        comparison_command = [
+            sys.executable,
+            str(ROOT / "scripts" / "compare_evidence.py"),
+            str(baseline_path),
+            str(candidate_path),
+            "--expected-candidate-revision",
+            "1111111111111111111111111111111111111111",
+            "--amplification",
+            "physics.body_visits_per_changed_body=physics.body_visits,physics.changed_bodies",
+            "--output",
+            str(comparison_path),
+        ]
+        comparison = subprocess.run(
+            comparison_command,
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if comparison.returncode != 0:
+            failures.append(
+                "budget fixture comparison failed: "
+                + (comparison.stderr.strip() or comparison.stdout.strip())
+            )
+            return failures
+
+        def evaluate(
+            label: str,
+            policy_path: Path,
+            expected_exit: int,
+        ) -> dict[str, Any] | None:
+            output_path = temporary_root / f"{label}.json"
+            command = [
+                sys.executable,
+                str(ROOT / "scripts" / "evaluate_budget.py"),
+                str(policy_path),
+                str(comparison_path),
+                "--output",
+                str(output_path),
+            ]
+            result = subprocess.run(
+                command,
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            if result.returncode != expected_exit:
+                failures.append(
+                    f"budget fixture {label} returned {result.returncode}, "
+                    f"expected {expected_exit}: "
+                    + (result.stderr.strip() or result.stdout.strip())
+                )
+                return None
+            if not output_path.is_file():
+                failures.append(f"budget fixture {label} did not write an evaluation")
+                return None
+            document = load_json(output_path)
+            errors = sorted(
+                evaluation_validator.iter_errors(document),
+                key=lambda error: tuple(str(part) for part in error.absolute_path),
+            )
+            if errors:
+                failures.append(
+                    f"budget evaluation {label} was rejected:\n  - "
+                    + "\n  - ".join(
+                        f"{format_path(list(error.absolute_path))}: {error.message}"
+                        for error in errors
+                    )
+                )
+                return None
+            return document
+
+        passing = evaluate("pass", policies["pass"], 0)
+        if passing is not None:
+            if passing["status"] != "pass":
+                failures.append("passing budget fixture did not produce status=pass")
+            if passing["execution"] != {
+                "exact_head_verified": True,
+                "automatic_retries": 0,
+            }:
+                failures.append("passing budget fixture lost exact-head/non-retry semantics")
+            if passing["summary"] != {
+                "hard_failures": 0,
+                "hard_blocked": 0,
+                "informational_exceeded": 1,
+                "calibration_exceeded": 1,
+                "unavailable": 0,
+            }:
+                failures.append("passing budget fixture produced an unexpected summary")
+
+        failing = evaluate("fail", policies["fail"], 2)
+        if failing is not None and (
+            failing["status"] != "fail"
+            or failing["summary"]["hard_failures"] != 1
+            or failing["rules"][0]["status"] != "exceeded"
+        ):
+            failures.append("hard regression budget did not fail closed")
+
+        hard_timing = evaluate("hard-timing", policies["hard_timing"], 2)
+        if hard_timing is not None and (
+            hard_timing["status"] != "blocked"
+            or hard_timing["summary"]["hard_blocked"] != 1
+            or hard_timing["rules"][0]["status"] != "ineligible_for_hard_gate"
+        ):
+            failures.append("wall-clock hard gate was not blocked")
+
+        zero_baseline = evaluate("zero-baseline", policies["zero_baseline"], 2)
+        if zero_baseline is not None and (
+            zero_baseline["status"] != "blocked"
+            or zero_baseline["summary"]["hard_blocked"] != 1
+            or zero_baseline["rules"][0]["status"] != "unavailable"
+        ):
+            failures.append("zero-baseline relative hard budget did not remain unavailable")
+
+        original_comparison_path = comparison_path
+        mismatch_path = temporary_root / "mismatch-comparison.json"
+        mismatch_command = [
+            sys.executable,
+            str(ROOT / "scripts" / "compare_evidence.py"),
+            str(baseline_path),
+            str(candidate_path),
+            "--expected-candidate-revision",
+            "ffffffffffffffffffffffffffffffffffffffff",
+            "--output",
+            str(mismatch_path),
+        ]
+        mismatch = subprocess.run(
+            mismatch_command,
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if mismatch.returncode != 0:
+            failures.append(
+                "budget mismatch comparison failed: "
+                + (mismatch.stderr.strip() or mismatch.stdout.strip())
+            )
+        else:
+            comparison_path = mismatch_path
+            mismatched = evaluate("mismatched-head", policies["pass"], 2)
+            comparison_path = original_comparison_path
+            if mismatched is not None and (
+                mismatched["status"] != "blocked"
+                or mismatched["execution"]["exact_head_verified"]
+            ):
+                failures.append("mismatched authoritative evidence did not block budgets")
+
+        malformed_policy = load_json(policies["pass"])
+        malformed_policy["rules"].append(dict(malformed_policy["rules"][0]))
+        malformed_path = temporary_root / "duplicate-rule-policy.json"
+        malformed_path.write_text(
+            json.dumps(malformed_policy, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        malformed_output = temporary_root / "malformed-evaluation.json"
+        malformed = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts" / "evaluate_budget.py"),
+                str(malformed_path),
+                str(original_comparison_path),
+                "--output",
+                str(malformed_output),
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if malformed.returncode != 1 or malformed_output.exists():
+            failures.append("malformed budget policy did not fail closed before evaluation")
+
+    return failures
+
+
 def validate_fixtures(evidence_path: Path | None = None) -> int:
     schema = load_json(SCHEMA_PATH)
     profile_schema = load_json(PROFILE_SCHEMA_PATH)
     comparison_schema = load_json(COMPARISON_SCHEMA_PATH)
+    budget_policy_schema = load_json(BUDGET_POLICY_SCHEMA_PATH)
+    budget_evaluation_schema = load_json(BUDGET_EVALUATION_SCHEMA_PATH)
     Draft202012Validator.check_schema(schema)
     Draft202012Validator.check_schema(profile_schema)
     Draft202012Validator.check_schema(comparison_schema)
+    Draft202012Validator.check_schema(budget_policy_schema)
+    Draft202012Validator.check_schema(budget_evaluation_schema)
     validator = Draft202012Validator(schema, format_checker=FormatChecker())
     profile_validator = Draft202012Validator(
         profile_schema, format_checker=FormatChecker()
     )
     comparison_validator = Draft202012Validator(
         comparison_schema, format_checker=FormatChecker()
+    )
+    budget_policy_validator = Draft202012Validator(
+        budget_policy_schema, format_checker=FormatChecker()
+    )
+    budget_evaluation_validator = Draft202012Validator(
+        budget_evaluation_schema, format_checker=FormatChecker()
     )
 
     failures: list[str] = []
@@ -654,6 +901,12 @@ def validate_fixtures(evidence_path: Path | None = None) -> int:
             )
 
     failures.extend(validate_comparison_contract(validator, comparison_validator))
+    failures.extend(
+        validate_budget_contract(
+            budget_policy_validator,
+            budget_evaluation_validator,
+        )
+    )
 
     if failures:
         print("Performance Evidence contract validation failed:", file=sys.stderr)
@@ -677,7 +930,8 @@ def validate_fixtures(evidence_path: Path | None = None) -> int:
     print(
         "Performance Evidence contract validation passed "
         f"({len(profile_paths)} profiles, {len(valid_paths)} valid, "
-        f"{len(invalid_paths)} invalid fixtures, 1 comparison contract)."
+        f"{len(invalid_paths)} invalid fixtures, 1 comparison contract, "
+        "1 budget policy/evaluation contract)."
     )
     if evidence_path is not None:
         print(f"Dogfood evidence written to {evidence_path}.")
