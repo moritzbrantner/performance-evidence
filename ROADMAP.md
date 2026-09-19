@@ -73,7 +73,7 @@ The machine-readable artifact is authoritative. Markdown reports and GitHub Page
 - [x] Add allocation evidence and copy profiling where available (for example DHAT-style evidence).
 - [x] Provide lightweight application counters for traversals, materializations, snapshots, recomputations, and bytes moved.
 - [ ] Ensure instrumentation can be disabled without changing program semantics.
-- [ ] Dogfood on a simulation/engine hot path that previously suffered from unnecessary copies/materialization.
+- [x] Dogfood canonical evidence on the physics-engine deterministic sandbox hot path, including domain-owned work counters and exact-head consumer validation.
 
 ## Slice 5 — .NET adapter
 
