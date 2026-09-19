@@ -65,4 +65,6 @@ See [`docs/agent-landscape.md`](docs/agent-landscape.md) for the direct reposito
 
 CI artifact producers can use the [`ci-artifact-reuse/v1` profile](docs/ci-artifact-reuse-profile.md) to report setup, build, upload, artifact-size, and fan-out economics without turning those measurements into correctness or release authority.
 
+Rust repositories can enrich canonical evidence with deterministic instruction/cache/call measurements using the [`rust-callgrind/v1` adapter](docs/rust-callgrind-adapter.md). The adapter preserves repository-owned scenario and semantic-counter authority and links the raw Callgrind artifact by hash.
+
 See [ROADMAP.md](ROADMAP.md) for the planned slices.
