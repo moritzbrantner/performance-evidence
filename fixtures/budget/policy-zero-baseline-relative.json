@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "id": "physics/resting-stack-zero-baseline-relative-v1",
+  "execution": {
+    "require_exact_head": true,
+    "automatic_retries": 0
+  },
+  "rules": [
+    {
+      "id": "copied-bytes-relative-regression",
+      "target": {
+        "kind": "measurement",
+        "name": "memory.bytes_copied"
+      },
+      "mode": "hard",
+      "assertion": {
+        "kind": "relative_regression_max",
+        "maximum": 0.1
+      }
+    }
+  ]
+}
