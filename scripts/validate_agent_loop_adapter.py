@@ -44,6 +44,90 @@ def validate_repository_uris() -> None:
             )
 
 
+def expect_value_error(action, expected_fragment: str) -> None:
+    try:
+        action()
+    except ValueError as error:
+        if expected_fragment not in str(error):
+            raise
+    else:
+        raise ValueError(f"expected ValueError containing {expected_fragment!r}")
+
+
+def validate_repository_identity_normalization(report: dict) -> None:
+    baseline = convert_report(report, source_dirty=False)[0][1]
+    expected_hash = baseline["scenario"]["workload"]["hash"]
+    for repository in (
+        "moritzbrantner/physics-engine",
+        "https://github.com/moritzbrantner/physics-engine.git",
+        "http://github.com/moritzbrantner/physics-engine.git",
+        "git://github.com/moritzbrantner/physics-engine.git",
+        "git@github.com:moritzbrantner/physics-engine.git",
+        "ssh://git@github.com/moritzbrantner/physics-engine.git",
+    ):
+        variant = copy.deepcopy(report)
+        variant["attempts"][0]["repository"] = repository
+        evidence = convert_report(variant, source_dirty=False)[0][1]
+        if evidence["source"].get("repository") != EXPECTED_REPOSITORY:
+            raise ValueError("repository normalization changed source provenance")
+        if evidence["scenario"]["workload"]["parameters"]["repository"] != EXPECTED_REPOSITORY:
+            raise ValueError("repository normalization was not applied to workload identity")
+        if evidence["scenario"]["workload"]["hash"] != expected_hash:
+            raise ValueError("equivalent repository spellings changed workload identity")
+
+
+def validate_routing_comparability(report: dict) -> None:
+    baseline = convert_report(report, source_dirty=False)[0][1]
+    variant = copy.deepcopy(report)
+    attempt = variant["attempts"][0]
+    attempt["provider"] = "other-provider"
+    attempt["model"] = "other-model"
+    routed = convert_report(variant, source_dirty=False)[0][1]
+
+    if (
+        routed["scenario"]["workload"]["hash"]
+        != baseline["scenario"]["workload"]["hash"]
+    ):
+        raise ValueError("provider/model routing changed workload identity")
+    if (
+        routed["environment"]["fingerprint"]
+        != baseline["environment"]["fingerprint"]
+    ):
+        raise ValueError("provider/model routing changed execution-environment identity")
+    extension = routed["extensions"]["agent.execution"]
+    if extension.get("provider") != "other-provider" or extension.get("model") != "other-model":
+        raise ValueError("provider/model routing metadata was not preserved")
+
+
+def validate_malformed_telemetry_rejected(report: dict) -> None:
+    cases = (
+        ("agent.input_tokens", ("usage", "inputTokens"), -1),
+        ("usage", ("usage",), "not-an-object"),
+        ("baselineSha", ("baselineSha",), 123),
+        ("candidateSha", ("candidateSha",), 123),
+        ("resumedProviderSession", ("resumedProviderSession",), "false"),
+        ("attemptNumber", ("attemptNumber",), True),
+    )
+    for expected_fragment, path, value in cases:
+        invalid = copy.deepcopy(report)
+        target = invalid["attempts"][0]
+        if len(path) == 2:
+            target[path[0]][path[1]] = value
+        else:
+            target[path[0]] = value
+        expect_value_error(
+            lambda invalid=invalid: convert_report(invalid, source_dirty=False),
+            expected_fragment,
+        )
+
+    missing_repository = copy.deepcopy(report)
+    missing_repository["attempts"][0].pop("repository")
+    expect_value_error(
+        lambda: convert_report(missing_repository, source_dirty=False),
+        "repository",
+    )
+
+
 def validate_attempt_identity_compatibility(report: dict) -> None:
     legacy_report = copy.deepcopy(report)
     legacy_attempt = legacy_report["attempts"][0]
@@ -88,6 +172,9 @@ def main() -> int:
             )
             return 1
 
+        validate_repository_identity_normalization(report)
+        validate_routing_comparability(report)
+        validate_malformed_telemetry_rejected(report)
         validate_attempt_identity_compatibility(report)
 
         schema = load_json(SCHEMA_PATH)
