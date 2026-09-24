@@ -353,6 +353,15 @@ def convert(
     return output
 
 
+def validate_output_path(output: Path, inputs: tuple[Path, ...]) -> None:
+    resolved_output = output.resolve()
+    for input_path in inputs:
+        if resolved_output == input_path.resolve():
+            raise ValueError(
+                f"output path must not overwrite input artifact {input_path}"
+            )
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
@@ -380,6 +389,10 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     try:
+        validate_output_path(
+            args.output,
+            (args.base_evidence, args.benchmarkdotnet_json),
+        )
         base_evidence = load_json_object(args.base_evidence)
         converted = convert(
             base_evidence,
