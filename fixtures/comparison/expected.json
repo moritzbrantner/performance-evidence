@@ -6,7 +6,14 @@
     "scenario_id": "physics/resting-stack-100",
     "source_revision": "0000000000000000000000000000000000000000",
     "workload_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
-    "workload_id": "resting-stack-100"
+    "workload_id": "resting-stack-100",
+    "source_repository": "https://github.com/example/physics-engine",
+    "workload_seed": 42,
+    "workload_parameters": {
+      "body_count": 100,
+      "steps": 120
+    },
+    "declared_baseline": null
   },
   "candidate": {
     "dirty": false,
@@ -15,7 +22,17 @@
     "scenario_id": "physics/resting-stack-100",
     "source_revision": "1111111111111111111111111111111111111111",
     "workload_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
-    "workload_id": "resting-stack-100"
+    "workload_id": "resting-stack-100",
+    "source_repository": "https://github.com/example/physics-engine",
+    "workload_seed": 42,
+    "workload_parameters": {
+      "body_count": 100,
+      "steps": 120
+    },
+    "declared_baseline": {
+      "source_revision": "0000000000000000000000000000000000000000",
+      "evidence_hash": "sha256:712cbbbd52ce119c1dbd7e7128bbeee18bc5d8e2260ddded854767b31e5aae08"
+    }
   },
   "comparability": {
     "expected_candidate_revision": "1111111111111111111111111111111111111111",
@@ -104,7 +121,7 @@
       "name": "physics.changed_bodies",
       "relative_delta": {
         "status": "defined",
-        "value": 0.0
+        "value": 0
       },
       "status": "comparable"
     },

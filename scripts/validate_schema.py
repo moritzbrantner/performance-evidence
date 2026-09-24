@@ -929,6 +929,65 @@ def validate_budget_contract(
                 "internally contradictory comparison was not rejected before budgeting"
             )
 
+        provenance_tampered = load_json(original_comparison_path)
+        provenance_tampered["candidate"]["source_repository"] = (
+            "https://github.com/example/other-repository"
+        )
+        provenance_tampered_path = temporary_root / "provenance-tampered-comparison.json"
+        provenance_tampered_path.write_text(
+            json.dumps(provenance_tampered, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        provenance_tampered_output = temporary_root / "provenance-tampered-evaluation.json"
+        provenance_tampered_result = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts" / "evaluate_budget.py"),
+                str(policies["pass"]),
+                str(provenance_tampered_path),
+                "--output",
+                str(provenance_tampered_output),
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if (
+            provenance_tampered_result.returncode != 1
+            or provenance_tampered_output.exists()
+        ):
+            failures.append(
+                "comparison provenance tampering was not rejected before budgeting"
+            )
+
+        incomplete_comparison = load_json(original_comparison_path)
+        incomplete_comparison["candidate"].pop("workload_parameters")
+        incomplete_path = temporary_root / "incomplete-comparison.json"
+        incomplete_path.write_text(
+            json.dumps(incomplete_comparison, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        incomplete_output = temporary_root / "incomplete-evaluation.json"
+        incomplete_result = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts" / "evaluate_budget.py"),
+                str(policies["pass"]),
+                str(incomplete_path),
+                "--output",
+                str(incomplete_output),
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if incomplete_result.returncode != 1 or incomplete_output.exists():
+            failures.append(
+                "comparison missing self-describing provenance was not rejected"
+            )
+
         malformed_policy = load_json(policies["pass"])
         malformed_policy["rules"].append(dict(malformed_policy["rules"][0]))
         malformed_path = temporary_root / "duplicate-rule-policy.json"

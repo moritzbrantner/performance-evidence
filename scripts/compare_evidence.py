@@ -38,12 +38,16 @@ def evidence_identity(path: Path, document: dict[str, Any]) -> dict[str, Any]:
     workload = document["scenario"]["workload"]
     return {
         "evidence_hash": sha256_file(path),
+        "source_repository": document["source"].get("repository"),
         "source_revision": document["source"]["revision"],
         "dirty": document["source"]["dirty"],
         "scenario_id": document["scenario"]["id"],
         "workload_id": workload["id"],
         "workload_hash": workload["hash"],
+        "workload_seed": workload.get("seed"),
+        "workload_parameters": workload.get("parameters"),
         "environment_fingerprint": document["environment"]["fingerprint"],
+        "declared_baseline": document.get("baseline"),
     }
 
 

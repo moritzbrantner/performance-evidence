@@ -83,26 +83,32 @@ def optional_measurement(
     unit: str,
     measurement_type: str,
 ) -> None:
-    if isinstance(source, bool) or not isinstance(source, (int, float)) or source < 0:
+    if source is None:
         return
+    if isinstance(source, bool) or not isinstance(source, (int, float)) or source < 0:
+        raise ValueError(f"{name} must be a non-negative number when present")
     target.append(measurement(name, source, unit, measurement_type))
 
 
 def workload_identity(attempt: dict[str, Any]) -> dict[str, Any]:
+    repository = repository_uri(attempt.get("repository"))
+    if repository is None:
+        raise ValueError(
+            "attempt repository must be a non-empty GitHub owner/repo or repository URI"
+        )
     return {
-        "task_id": attempt.get("taskId"),
-        "project_id": attempt.get("projectId"),
-        "repository": attempt.get("repository"),
-        "baseline_revision": attempt.get("baselineSha"),
+        "task_id": attempt["taskId"],
+        "project_id": attempt["projectId"],
+        "repository": repository,
+        "baseline_revision": attempt["baselineSha"],
     }
 
 
 def environment_identity(attempt: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "environment": attempt.get("environment"),
-        "provider": attempt.get("provider"),
-        "model": attempt.get("model"),
-    }
+    environment = attempt.get("environment")
+    if environment is not None and not isinstance(environment, dict):
+        raise ValueError("attempt environment must be an object when present")
+    return {"environment": environment}
 
 
 def convert_attempt(attempt: dict[str, Any], source_dirty: bool) -> dict[str, Any]:
@@ -118,6 +124,7 @@ def convert_attempt(attempt: dict[str, Any], source_dirty: bool) -> dict[str, An
         "taskId": task_id,
         "runId": run_id,
         "projectId": project_id,
+        "repository": attempt.get("repository"),
         "baselineSha": baseline_sha,
         "provider": provider,
         "attemptNumber": attempt_number,
@@ -125,13 +132,41 @@ def convert_attempt(attempt: dict[str, Any], source_dirty: bool) -> dict[str, An
     missing = [name for name, value in required.items() if value is None]
     if missing:
         raise ValueError("attempt is missing required fields: " + ", ".join(missing))
+
+    for name, value in (
+        ("taskId", task_id),
+        ("runId", run_id),
+        ("projectId", project_id),
+        ("baselineSha", baseline_sha),
+        ("provider", provider),
+    ):
+        if not isinstance(value, str) or not value:
+            raise ValueError(f"{name} must be a non-empty string")
+    if (
+        isinstance(attempt_number, bool)
+        or not isinstance(attempt_number, int)
+        or attempt_number < 0
+    ):
+        raise ValueError("attemptNumber must be a non-negative integer")
     if attempt_id is not None and (not isinstance(attempt_id, str) or not attempt_id):
         raise ValueError("attemptId must be a non-empty string when present")
+
+    candidate_sha = attempt.get("candidateSha")
+    if candidate_sha is not None and (
+        not isinstance(candidate_sha, str) or not candidate_sha
+    ):
+        raise ValueError("candidateSha must be a non-empty string when present")
+    model = attempt.get("model")
+    if model is not None and (not isinstance(model, str) or not model):
+        raise ValueError("model must be a non-empty string when present")
+    resumed_provider_session = attempt.get("resumedProviderSession", False)
+    if not isinstance(resumed_provider_session, bool):
+        raise ValueError("resumedProviderSession must be a boolean when present")
 
     useful_work = [
         measurement(
             "agent.candidate_produced",
-            1 if attempt.get("candidateSha") else 0,
+            1 if candidate_sha is not None else 0,
             "count",
             "counter",
         )
@@ -140,6 +175,8 @@ def convert_attempt(attempt: dict[str, Any], source_dirty: bool) -> dict[str, An
     outcomes: list[dict[str, Any]] = []
 
     usage = attempt.get("usage")
+    if usage is not None and not isinstance(usage, dict):
+        raise ValueError("usage must be an object when present")
     if isinstance(usage, dict):
         optional_measurement(
             induced_work,
@@ -193,7 +230,7 @@ def convert_attempt(attempt: dict[str, Any], source_dirty: bool) -> dict[str, An
         "project_id": project_id,
         "provider": provider,
         "attempt_number": attempt_number,
-        "resumed_provider_session": bool(attempt.get("resumedProviderSession", False)),
+        "resumed_provider_session": resumed_provider_session,
     }
     if attempt_id is not None:
         extension["attempt_id"] = attempt_id
@@ -210,16 +247,10 @@ def convert_attempt(attempt: dict[str, Any], source_dirty: bool) -> dict[str, An
             extension[target_key] = value
 
     source: dict[str, Any] = {
-        "revision": str(baseline_sha),
+        "revision": baseline_sha,
         "dirty": source_dirty,
+        "repository": workload["repository"],
     }
-    uri = repository_uri(attempt.get("repository"))
-    if uri is not None:
-        source["repository"] = uri
-
-    toolchain = {"agent_provider": str(provider)}
-    if attempt.get("model") is not None:
-        toolchain["agent_model"] = str(attempt["model"])
 
     return {
         "schema_version": "1.0.0",
@@ -235,7 +266,6 @@ def convert_attempt(attempt: dict[str, Any], source_dirty: bool) -> dict[str, An
         "source": source,
         "environment": {
             "fingerprint": sha256_value(environment),
-            "toolchain": toolchain,
             "collector": {
                 "name": COLLECTOR_NAME,
                 "version": COLLECTOR_VERSION,
@@ -257,7 +287,11 @@ def output_name(attempt: dict[str, Any]) -> str:
     attempt_number = attempt.get("attemptNumber")
     if not isinstance(run_id, str) or not run_id:
         raise ValueError("attempt is missing runId")
-    if not isinstance(attempt_number, int) or attempt_number < 0:
+    if (
+        isinstance(attempt_number, bool)
+        or not isinstance(attempt_number, int)
+        or attempt_number < 0
+    ):
         raise ValueError("attempt has invalid attemptNumber")
     safe_run_id = re.sub(r"[^A-Za-z0-9_.-]", "-", run_id)
     return f"{safe_run_id}.attempt-{attempt_number}.performance-evidence.json"
