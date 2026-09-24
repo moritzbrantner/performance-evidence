@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -198,6 +199,31 @@ def main() -> int:
 
         with tempfile.TemporaryDirectory() as temporary_directory:
             temporary = Path(temporary_directory)
+
+            destructive_path = temporary / "raw.json"
+            destructive_bytes = benchmark_path.read_bytes()
+            destructive_path.write_bytes(destructive_bytes)
+            destructive = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "scripts" / "convert_benchmarkdotnet.py"),
+                    str(FIXTURE_DIR / "base-evidence.json"),
+                    str(destructive_path),
+                    "--benchmark",
+                    SELECTOR,
+                    "--output",
+                    str(destructive_path),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            if destructive.returncode != 1:
+                raise ValueError("destructive output/input collision unexpectedly succeeded")
+            if destructive_path.read_bytes() != destructive_bytes:
+                raise ValueError("rejected destructive conversion modified the raw input")
+
             single_path = temporary / "single.json"
             source = load_json_object(benchmark_path)
             source["Benchmarks"] = [source["Benchmarks"][0]]
