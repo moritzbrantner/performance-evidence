@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import re
 import sys
 from pathlib import Path
@@ -85,8 +86,13 @@ def optional_measurement(
 ) -> None:
     if source is None:
         return
-    if isinstance(source, bool) or not isinstance(source, (int, float)) or source < 0:
-        raise ValueError(f"{name} must be a non-negative number when present")
+    if (
+        isinstance(source, bool)
+        or not isinstance(source, (int, float))
+        or source < 0
+        or not math.isfinite(source)
+    ):
+        raise ValueError(f"{name} must be a finite non-negative number when present")
     target.append(measurement(name, source, unit, measurement_type))
 
 
