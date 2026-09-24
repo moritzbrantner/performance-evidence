@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import importlib.metadata
 import json
+import math
 import os
 import platform
 import subprocess
@@ -32,9 +33,13 @@ MEASUREMENT_GROUPS = ("useful_work", "induced_work", "outcomes")
 REPOSITORY_URI = "https://github.com/moritzbrantner/performance-evidence"
 
 
+def reject_json_constant(value: str) -> None:
+    raise ValueError(f"invalid non-finite JSON number {value!r}")
+
+
 def load_json(path: Path) -> Any:
     with path.open("r", encoding="utf-8") as handle:
-        return json.load(handle)
+        return json.load(handle, parse_constant=reject_json_constant)
 
 
 def format_path(parts: list[Any]) -> str:
@@ -45,41 +50,75 @@ def format_path(parts: list[Any]) -> str:
     )
 
 
+def portable_artifact_path(path: str) -> bool:
+    if not path or path.startswith("/") or "\\" in path:
+        return False
+    parts = path.split("/")
+    if any(part in {"", ".", ".."} for part in parts):
+        return False
+    if len(parts[0]) == 2 and parts[0][0].isalpha() and parts[0][1] == ":":
+        return False
+    return True
+
+
 def semantic_errors(document: Any) -> list[str]:
     if not isinstance(document, dict):
         return []
 
-    measurements = document.get("measurements")
-    if not isinstance(measurements, dict):
-        return []
-
     errors: list[str] = []
-    seen: dict[str, str] = {}
-    total = 0
+    measurements = document.get("measurements")
+    if isinstance(measurements, dict):
+        seen: dict[str, str] = {}
+        total = 0
 
-    for group in MEASUREMENT_GROUPS:
-        entries = measurements.get(group)
-        if not isinstance(entries, list):
-            continue
-        for index, measurement in enumerate(entries):
-            total += 1
-            if not isinstance(measurement, dict):
+        for group in MEASUREMENT_GROUPS:
+            entries = measurements.get(group)
+            if not isinstance(entries, list):
                 continue
-            name = measurement.get("name")
-            if not isinstance(name, str):
-                continue
+            for index, measurement in enumerate(entries):
+                total += 1
+                if not isinstance(measurement, dict):
+                    continue
+                name = measurement.get("name")
+                if not isinstance(name, str):
+                    continue
 
-            location = f"measurements.{group}[{index}]"
-            previous = seen.get(name)
+                location = f"measurements.{group}[{index}]"
+                previous = seen.get(name)
+                if previous is not None:
+                    errors.append(
+                        f"{location}.name duplicates {name!r}; first declared at {previous}.name"
+                    )
+                else:
+                    seen[name] = location
+
+                value = measurement.get("value")
+                if isinstance(value, float) and not math.isfinite(value):
+                    errors.append(f"{location}.value must be finite")
+
+        if total == 0:
+            errors.append("measurements must contain at least one measurement")
+
+    artifacts = document.get("artifacts")
+    if isinstance(artifacts, list):
+        seen_paths: dict[str, int] = {}
+        for index, artifact in enumerate(artifacts):
+            if not isinstance(artifact, dict):
+                continue
+            path = artifact.get("path")
+            if not isinstance(path, str):
+                continue
+            if not portable_artifact_path(path):
+                errors.append(
+                    f"artifacts[{index}].path must be a portable relative POSIX path"
+                )
+            previous = seen_paths.get(path)
             if previous is not None:
                 errors.append(
-                    f"{location}.name duplicates {name!r}; first declared at {previous}.name"
+                    f"artifacts[{index}].path duplicates artifacts[{previous}].path"
                 )
             else:
-                seen[name] = location
-
-    if total == 0:
-        errors.append("measurements must contain at least one measurement")
+                seen_paths[path] = index
 
     return errors
 
