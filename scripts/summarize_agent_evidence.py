@@ -53,6 +53,53 @@ def input_digest(documents: Iterable[dict[str, Any]]) -> str:
     return sha256_bytes(("\n".join(hashes) + "\n").encode("utf-8"))
 
 
+def attempt_identity(document: dict[str, Any]) -> tuple[str, str]:
+    extension_root = document.get("extensions")
+    extension = (
+        extension_root.get(EXTENSION_NAMESPACE)
+        if isinstance(extension_root, dict)
+        else None
+    )
+    if isinstance(extension, dict):
+        attempt_id = extension.get("attempt_id")
+        if isinstance(attempt_id, str) and attempt_id:
+            return ("attempt_id", attempt_id)
+
+        run_id = extension.get("run_id")
+        attempt_number = extension.get("attempt_number")
+        if (
+            isinstance(run_id, str)
+            and run_id
+            and isinstance(attempt_number, int)
+            and not isinstance(attempt_number, bool)
+            and attempt_number >= 1
+        ):
+            return ("run_attempt", f"{run_id}:{attempt_number}")
+
+    return ("document_hash", sha256_bytes(canonical_json(document)))
+
+
+def deduplicate_documents(
+    documents: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    unique: list[dict[str, Any]] = []
+    seen: dict[tuple[str, str], bytes] = {}
+    for document in documents:
+        identity = attempt_identity(document)
+        encoded = canonical_json(document)
+        previous = seen.get(identity)
+        if previous is None:
+            seen[identity] = encoded
+            unique.append(document)
+            continue
+        if previous != encoded:
+            raise ValueError(
+                "conflicting evidence for the same agent attempt identity "
+                f"{identity[0]}={identity[1]!r}"
+            )
+    return unique
+
+
 def measurement_index(document: dict[str, Any]) -> tuple[dict[str, dict[str, Any]], int]:
     result: dict[str, dict[str, Any]] = {}
     examined = 0
@@ -108,6 +155,9 @@ def increment(counter: Counter[str], value: Any, *, missing: str = "<missing>") 
 
 
 def summarize_documents(documents: list[dict[str, Any]]) -> dict[str, Any]:
+    loaded_document_count = len(documents)
+    documents = deduplicate_documents(documents)
+
     provider_counts: Counter[str] = Counter()
     model_counts: Counter[str] = Counter()
     repository_counts: Counter[str] = Counter()
@@ -215,14 +265,20 @@ def summarize_documents(documents: list[dict[str, Any]]) -> dict[str, Any]:
             },
         },
         "work": {
-            "documents_loaded": attempt_count,
+            "documents_loaded": loaded_document_count,
+            "duplicate_documents_ignored": loaded_document_count - attempt_count,
             "measurement_entries_examined": measurements_examined,
         },
     }
 
 
-def find_evidence(input_dir: Path) -> list[Path]:
-    return sorted(path for path in input_dir.rglob("*.json") if path.is_file())
+def find_evidence(input_dir: Path, exclude: Path | None = None) -> list[Path]:
+    excluded = exclude.resolve() if exclude is not None else None
+    return sorted(
+        path
+        for path in input_dir.rglob("*.json")
+        if path.is_file() and (excluded is None or path.resolve() != excluded)
+    )
 
 
 def parse_args() -> argparse.Namespace:
@@ -239,7 +295,7 @@ def main() -> int:
     try:
         schema = load_json(SCHEMA_PATH)
         validator = Draft202012Validator(schema, format_checker=FormatChecker())
-        paths = find_evidence(args.input_dir)
+        paths = find_evidence(args.input_dir, args.output)
         if not paths:
             raise ValueError(f"no JSON evidence found below {args.input_dir}")
         documents = []
