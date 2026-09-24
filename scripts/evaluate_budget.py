@@ -321,6 +321,16 @@ def evaluate_rule(
     if entry is None:
         result["reason"] = "target is missing from the comparison"
         return result
+    if target["kind"] == "amplification" and (
+        entry["numerator"] != target["numerator"]
+        or entry["denominator"] != target["denominator"]
+    ):
+        result["reason"] = (
+            "amplification definition does not match policy target: "
+            f"expected {target['numerator']}/{target['denominator']}, "
+            f"got {entry['numerator']}/{entry['denominator']}"
+        )
+        return result
 
     observed = observed_values(entry, target["kind"])
     result["observed"] = observed
@@ -432,6 +442,7 @@ def evaluate_budget(
             "sha256": sha256_file(policy_path),
         },
         "comparison": {
+            "sha256": sha256_file(comparison_path),
             "candidate_evidence_hash": comparison["candidate"]["evidence_hash"],
             "candidate_source_revision": comparison["candidate"]["source_revision"],
             "baseline_evidence_hash": comparison["baseline"]["evidence_hash"],
