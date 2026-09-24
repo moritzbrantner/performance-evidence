@@ -82,8 +82,52 @@
             "name": {
               "type": "string",
               "minLength": 1
+            },
+            "numerator": {
+              "type": "string",
+              "minLength": 1
+            },
+            "denominator": {
+              "type": "string",
+              "minLength": 1
             }
-          }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "amplification"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              "then": {
+                "required": [
+                  "numerator",
+                  "denominator"
+                ]
+              },
+              "else": {
+                "not": {
+                  "anyOf": [
+                    {
+                      "required": [
+                        "numerator"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "denominator"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          ]
         },
         "mode": {
           "enum": [
