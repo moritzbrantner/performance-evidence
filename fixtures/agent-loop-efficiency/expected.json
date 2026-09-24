@@ -5,11 +5,11 @@
     "description": "One coding-agent implementation attempt measured for computational cost and time-to-green.",
     "workload": {
       "id": "repository-task-v1",
-      "hash": "sha256:25efe1f4fbef3019080da9ba96160bef3b86839957f52bc2c626a99a40a886da",
+      "hash": "sha256:5b2eb6ac84a9011d72769372ca7284bba15e90f4e75ff7e58f3b5db937da7c8b",
       "parameters": {
         "task_id": "018f5d42-7c2a-7b37-a912-3c7343db8b3f",
         "project_id": "physics-engine",
-        "repository": "moritzbrantner/physics-engine",
+        "repository": "https://github.com/moritzbrantner/physics-engine",
         "baseline_revision": "0123456789abcdef0123456789abcdef01234567"
       }
     }
@@ -20,11 +20,7 @@
     "repository": "https://github.com/moritzbrantner/physics-engine"
   },
   "environment": {
-    "fingerprint": "sha256:5cd8c35f170ecec71c8fb8ec66852896c99043f211188022c6415fc1bdcf3897",
-    "toolchain": {
-      "agent_provider": "example-provider",
-      "agent_model": "example-model"
-    },
+    "fingerprint": "sha256:b27739c19962bd8fdc643d2ebeef8a60ee89c476ecde8e1553fc730e43155aab",
     "collector": {
       "name": "performance-evidence.agent-loop-efficiency-adapter",
       "version": "1.0.0"
@@ -91,7 +87,9 @@
       "resumed_provider_session": false,
       "model": "example-model",
       "outcome": "passed",
-      "ci_run_ids": [123456789],
+      "ci_run_ids": [
+        123456789
+      ],
       "candidate_revision": "89abcdef0123456789abcdef0123456789abcdef"
     }
   }
