@@ -102,6 +102,8 @@ def validate_routing_comparability(report: dict) -> None:
 def validate_malformed_telemetry_rejected(report: dict) -> None:
     cases = (
         ("agent.input_tokens", ("usage", "inputTokens"), -1),
+        ("finite", ("usage", "inputTokens"), float("nan")),
+        ("finite", ("usage", "outputTokens"), float("inf")),
         ("usage", ("usage",), "not-an-object"),
         ("baselineSha", ("baselineSha",), 123),
         ("candidateSha", ("candidateSha",), 123),

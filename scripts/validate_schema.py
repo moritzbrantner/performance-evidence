@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import importlib.metadata
 import json
+import math
 import os
 import platform
 import subprocess
@@ -32,9 +33,13 @@ MEASUREMENT_GROUPS = ("useful_work", "induced_work", "outcomes")
 REPOSITORY_URI = "https://github.com/moritzbrantner/performance-evidence"
 
 
+def reject_json_constant(value: str) -> None:
+    raise ValueError(f"invalid non-finite JSON number {value!r}")
+
+
 def load_json(path: Path) -> Any:
     with path.open("r", encoding="utf-8") as handle:
-        return json.load(handle)
+        return json.load(handle, parse_constant=reject_json_constant)
 
 
 def format_path(parts: list[Any]) -> str:
@@ -45,41 +50,75 @@ def format_path(parts: list[Any]) -> str:
     )
 
 
+def portable_artifact_path(path: str) -> bool:
+    if not path or path.startswith("/") or "\\" in path:
+        return False
+    parts = path.split("/")
+    if any(part in {"", ".", ".."} for part in parts):
+        return False
+    if len(parts[0]) == 2 and parts[0][0].isalpha() and parts[0][1] == ":":
+        return False
+    return True
+
+
 def semantic_errors(document: Any) -> list[str]:
     if not isinstance(document, dict):
         return []
 
-    measurements = document.get("measurements")
-    if not isinstance(measurements, dict):
-        return []
-
     errors: list[str] = []
-    seen: dict[str, str] = {}
-    total = 0
+    measurements = document.get("measurements")
+    if isinstance(measurements, dict):
+        seen: dict[str, str] = {}
+        total = 0
 
-    for group in MEASUREMENT_GROUPS:
-        entries = measurements.get(group)
-        if not isinstance(entries, list):
-            continue
-        for index, measurement in enumerate(entries):
-            total += 1
-            if not isinstance(measurement, dict):
+        for group in MEASUREMENT_GROUPS:
+            entries = measurements.get(group)
+            if not isinstance(entries, list):
                 continue
-            name = measurement.get("name")
-            if not isinstance(name, str):
-                continue
+            for index, measurement in enumerate(entries):
+                total += 1
+                if not isinstance(measurement, dict):
+                    continue
+                name = measurement.get("name")
+                if not isinstance(name, str):
+                    continue
 
-            location = f"measurements.{group}[{index}]"
-            previous = seen.get(name)
+                location = f"measurements.{group}[{index}]"
+                previous = seen.get(name)
+                if previous is not None:
+                    errors.append(
+                        f"{location}.name duplicates {name!r}; first declared at {previous}.name"
+                    )
+                else:
+                    seen[name] = location
+
+                value = measurement.get("value")
+                if isinstance(value, float) and not math.isfinite(value):
+                    errors.append(f"{location}.value must be finite")
+
+        if total == 0:
+            errors.append("measurements must contain at least one measurement")
+
+    artifacts = document.get("artifacts")
+    if isinstance(artifacts, list):
+        seen_paths: dict[str, int] = {}
+        for index, artifact in enumerate(artifacts):
+            if not isinstance(artifact, dict):
+                continue
+            path = artifact.get("path")
+            if not isinstance(path, str):
+                continue
+            if not portable_artifact_path(path):
+                errors.append(
+                    f"artifacts[{index}].path must be a portable relative POSIX path"
+                )
+            previous = seen_paths.get(path)
             if previous is not None:
                 errors.append(
-                    f"{location}.name duplicates {name!r}; first declared at {previous}.name"
+                    f"artifacts[{index}].path duplicates artifacts[{previous}].path"
                 )
             else:
-                seen[name] = location
-
-    if total == 0:
-        errors.append("measurements must contain at least one measurement")
+                seen_paths[path] = index
 
     return errors
 
@@ -708,6 +747,62 @@ def validate_comparison_contract(
                     "cross-repository evidence unexpectedly exposed comparable measurements"
                 )
 
+        overflow_baseline = load_json(baseline_path)
+        overflow_candidate = load_json(candidate_path)
+        for document in (overflow_baseline, overflow_candidate):
+            next(
+                entry
+                for entry in document["measurements"]["induced_work"]
+                if entry["name"] == "physics.body_visits"
+            )["value"] = 1e308
+            next(
+                entry
+                for entry in document["measurements"]["useful_work"]
+                if entry["name"] == "physics.changed_bodies"
+            )["value"] = 1e-308
+        overflow_candidate.pop("baseline", None)
+        overflow_baseline_path = (
+            Path(temporary_directory) / "overflow-baseline.json"
+        )
+        overflow_candidate_path = (
+            Path(temporary_directory) / "overflow-candidate.json"
+        )
+        overflow_output = Path(temporary_directory) / "overflow-comparison.json"
+        overflow_baseline_path.write_text(
+            json.dumps(overflow_baseline, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        overflow_candidate_path.write_text(
+            json.dumps(overflow_candidate, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        overflow = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts" / "compare_evidence.py"),
+                str(overflow_baseline_path),
+                str(overflow_candidate_path),
+                "--expected-candidate-revision",
+                "1111111111111111111111111111111111111111",
+                "--amplification",
+                "overflow=physics.body_visits,physics.changed_bodies",
+                "--output",
+                str(overflow_output),
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if (
+            overflow.returncode != 1
+            or overflow_output.exists()
+            or "non-finite" not in overflow.stderr
+        ):
+            failures.append(
+                "derived numeric overflow did not fail closed before serialization"
+            )
+
     return failures
 
 
@@ -1180,6 +1275,61 @@ def validate_fixtures(evidence_path: Path | None = None) -> int:
                 failures.append(
                     "structurally malformed measurements unexpectedly passed validation"
                 )
+
+    if valid_paths:
+        template = json.loads(json.dumps(load_json(valid_paths[0])))
+
+        nonfinite = json.loads(json.dumps(template))
+        first_group = next(
+            group
+            for group in MEASUREMENT_GROUPS
+            if nonfinite["measurements"][group]
+        )
+        nonfinite["measurements"][first_group][0]["value"] = float("nan")
+        nonfinite_errors = validation_errors(validator, nonfinite)
+        if not any("must be finite" in error for error in nonfinite_errors):
+            failures.append("non-finite canonical measurement unexpectedly passed")
+
+        unsafe_artifact = json.loads(json.dumps(template))
+        unsafe_artifact["artifacts"] = [
+            {
+                "kind": "trace",
+                "path": "../outside/trace.json",
+                "sha256": "sha256:" + "0" * 64,
+            }
+        ]
+        unsafe_errors = validation_errors(validator, unsafe_artifact)
+        if not any(
+            "portable relative POSIX path" in error for error in unsafe_errors
+        ):
+            failures.append("artifact traversal path unexpectedly passed validation")
+
+        duplicate_artifact = json.loads(json.dumps(template))
+        duplicate_artifact["artifacts"] = [
+            {
+                "kind": "trace",
+                "path": "artifacts/profile.json",
+                "sha256": "sha256:" + "0" * 64,
+            },
+            {
+                "kind": "heap",
+                "path": "artifacts/profile.json",
+                "sha256": "sha256:" + "1" * 64,
+            },
+        ]
+        duplicate_errors = validation_errors(validator, duplicate_artifact)
+        if not any("duplicates artifacts" in error for error in duplicate_errors):
+            failures.append("duplicate artifact path unexpectedly passed validation")
+
+        with tempfile.TemporaryDirectory() as strict_json_directory:
+            nonstandard_path = Path(strict_json_directory) / "nonstandard.json"
+            nonstandard_path.write_text('{"value": NaN}\n', encoding="utf-8")
+            try:
+                load_json(nonstandard_path)
+            except ValueError:
+                pass
+            else:
+                failures.append("non-standard NaN JSON unexpectedly parsed")
 
     failures.extend(validate_source_state())
     failures.extend(validate_comparison_contract(validator, comparison_validator))

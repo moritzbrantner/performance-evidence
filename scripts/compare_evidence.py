@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import sys
 from pathlib import Path
 from typing import Any
@@ -114,6 +115,20 @@ def unavailable_relative_delta() -> dict[str, Any]:
     return {"status": "unavailable", "value": None}
 
 
+def finite_divide(
+    numerator: int | float,
+    denominator: int | float,
+    label: str,
+) -> float:
+    try:
+        value = numerator / denominator
+    except OverflowError as error:
+        raise ValueError(f"{label} overflowed") from error
+    if not math.isfinite(value):
+        raise ValueError(f"{label} produced a non-finite value")
+    return value
+
+
 def parse_amplification_spec(value: str) -> tuple[str, str, str]:
     try:
         name, operands = value.split("=", 1)
@@ -178,7 +193,11 @@ def ratio_snapshot(
         "status": "defined",
         "numerator_value": numerator_value,
         "denominator_value": denominator_value,
-        "value": numerator_value / denominator_value,
+        "value": finite_divide(
+            numerator_value,
+            denominator_value,
+            f"amplification {numerator}/{denominator}",
+        ),
     }
 
 
@@ -285,7 +304,11 @@ def compare_amplification(
     else:
         result["relative_delta"] = {
             "status": "defined",
-            "value": (candidate_value - baseline_value) / baseline_value,
+            "value": finite_divide(
+                candidate_value - baseline_value,
+                baseline_value,
+                f"relative amplification delta {name}",
+            ),
         }
     return result
 
@@ -331,7 +354,11 @@ def compare_measurement(
     else:
         result["relative_delta"] = {
             "status": "defined",
-            "value": (candidate_value - baseline_value) / baseline_value,
+            "value": finite_divide(
+                candidate_value - baseline_value,
+                baseline_value,
+                f"relative measurement delta {name}",
+            ),
         }
     return result
 

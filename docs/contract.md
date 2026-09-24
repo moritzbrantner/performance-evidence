@@ -17,7 +17,7 @@ The distinction lets consumers compute work amplification without pretending tha
 A measurement consists of:
 
 - a stable `name`;
-- a numeric, non-negative `value`;
+- a finite numeric, non-negative `value`;
 - an explicit `unit`;
 - a `measurement_type` describing how the value behaves.
 
@@ -47,7 +47,7 @@ The derived comparison contract rejects dirty, workload-mismatched, or environme
 
 ## Artifacts
 
-Profiler outputs are optional attachments referenced by kind, path, and SHA-256 hash. They are supporting evidence, not the canonical performance record. This keeps the core artifact usable even when a particular profiler is unavailable.
+Profiler outputs are optional attachments referenced by kind, path, and SHA-256 hash. Artifact paths are unique portable relative POSIX paths: absolute paths, Windows-style paths, empty/dot segments, and `..` traversal are rejected. They are supporting evidence, not the canonical performance record. This keeps the core artifact usable even when a particular profiler is unavailable.
 
 ## Extensions
 
@@ -68,4 +68,4 @@ python scripts/validate_schema.py
 
 Validation checks the Draft 2020-12 schema, all positive/negative fixtures, and semantic invariants that are intentionally clearer outside JSON Schema.
 
-The machine-readable JSON is authoritative. Markdown summaries, GitHub Pages, flamegraphs, and runtime-profiler views are derived representations.
+The machine-readable JSON is authoritative and must be standards-compliant JSON; non-finite extensions such as `NaN` and `Infinity` are rejected. Markdown summaries, GitHub Pages, flamegraphs, and runtime-profiler views are derived representations.
