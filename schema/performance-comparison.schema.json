@@ -83,6 +83,37 @@
         },
         "environment_fingerprint": {
           "$ref": "#/$defs/sha256"
+        },
+        "source_repository": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uri"
+        },
+        "workload_seed": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "workload_parameters": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
+        "declared_baseline": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/declaredBaseline"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       }
     },
@@ -329,6 +360,23 @@
         },
         "relative_delta": {
           "$ref": "#/$defs/relativeDelta"
+        }
+      }
+    },
+    "declaredBaseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_revision",
+        "evidence_hash"
+      ],
+      "properties": {
+        "source_revision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence_hash": {
+          "$ref": "#/$defs/sha256"
         }
       }
     }
