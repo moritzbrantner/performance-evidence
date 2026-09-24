@@ -45,16 +45,26 @@ def format_path(parts: list[Any]) -> str:
     )
 
 
-def semantic_errors(document: dict[str, Any]) -> list[str]:
+def semantic_errors(document: Any) -> list[str]:
+    if not isinstance(document, dict):
+        return []
+
+    measurements = document.get("measurements")
+    if not isinstance(measurements, dict):
+        return []
+
     errors: list[str] = []
-    measurements = document.get("measurements", {})
     seen: dict[str, str] = {}
     total = 0
 
     for group in MEASUREMENT_GROUPS:
-        entries = measurements.get(group, [])
+        entries = measurements.get(group)
+        if not isinstance(entries, list):
+            continue
         for index, measurement in enumerate(entries):
             total += 1
+            if not isinstance(measurement, dict):
+                continue
             name = measurement.get("name")
             if not isinstance(name, str):
                 continue
@@ -75,7 +85,7 @@ def semantic_errors(document: dict[str, Any]) -> list[str]:
 
 
 def validation_errors(
-    validator: Draft202012Validator, document: dict[str, Any]
+    validator: Draft202012Validator, document: Any
 ) -> list[str]:
     schema_errors = sorted(
         validator.iter_errors(document),
@@ -89,10 +99,18 @@ def validation_errors(
     return errors
 
 
-def profile_semantic_errors(document: dict[str, Any]) -> list[str]:
+def profile_semantic_errors(document: Any) -> list[str]:
+    if not isinstance(document, dict):
+        return []
+    measurements = document.get("measurements")
+    if not isinstance(measurements, list):
+        return []
+
     errors: list[str] = []
     seen: dict[str, int] = {}
-    for index, measurement in enumerate(document.get("measurements", [])):
+    for index, measurement in enumerate(measurements):
+        if not isinstance(measurement, dict):
+            continue
         name = measurement.get("name")
         if not isinstance(name, str):
             continue
@@ -122,6 +140,21 @@ def profile_validation_errors(
     return errors
 
 
+def measurement_entry_count(document: Any) -> int:
+    if not isinstance(document, dict):
+        return 0
+    measurements = document.get("measurements")
+    if isinstance(measurements, list):
+        return len(measurements)
+    if not isinstance(measurements, dict):
+        return 0
+    return sum(
+        len(entries)
+        for group in MEASUREMENT_GROUPS
+        if isinstance((entries := measurements.get(group)), list)
+    )
+
+
 def sha256_bytes(contents: bytes) -> str:
     return "sha256:" + hashlib.sha256(contents).hexdigest()
 
@@ -138,11 +171,9 @@ def workload_hash(paths: list[Path]) -> str:
 
 
 def source_state() -> tuple[str, bool]:
-    revision = os.environ.get("GITHUB_SHA")
-    if not revision:
-        revision = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
-        ).strip()
+    revision = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
+    ).strip()
 
     dirty = bool(
         subprocess.check_output(
@@ -150,6 +181,27 @@ def source_state() -> tuple[str, bool]:
         ).strip()
     )
     return revision, dirty
+
+
+def validate_source_state() -> list[str]:
+    expected = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
+    ).strip()
+    previous = os.environ.get("GITHUB_SHA")
+    os.environ["GITHUB_SHA"] = "f" * 40
+    try:
+        observed, _ = source_state()
+    finally:
+        if previous is None:
+            os.environ.pop("GITHUB_SHA", None)
+        else:
+            os.environ["GITHUB_SHA"] = previous
+
+    if observed != expected:
+        return [
+            "source revision followed GITHUB_SHA instead of the measured checkout HEAD"
+        ]
+    return []
 
 
 def environment_evidence() -> dict[str, Any]:
@@ -609,6 +661,53 @@ def validate_comparison_contract(
                 "incomparable scenario unexpectedly exposed measurement deltas"
             )
 
+        cross_repository_candidate = load_json(candidate_path)
+        cross_repository_candidate["source"]["repository"] = (
+            "https://github.com/example/other-repository"
+        )
+        cross_repository_candidate_path = (
+            Path(temporary_directory) / "cross-repository-candidate.json"
+        )
+        cross_repository_candidate_path.write_text(
+            json.dumps(cross_repository_candidate, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        cross_repository_path = Path(temporary_directory) / "cross-repository.json"
+        cross_repository = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts" / "compare_evidence.py"),
+                str(baseline_path),
+                str(cross_repository_candidate_path),
+                "--expected-candidate-revision",
+                "1111111111111111111111111111111111111111",
+                "--output",
+                str(cross_repository_path),
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if cross_repository.returncode != 0:
+            failures.append(
+                "cross-repository comparison fixture execution failed: "
+                + (cross_repository.stderr.strip() or cross_repository.stdout.strip())
+            )
+        else:
+            cross_repository_document = load_json(cross_repository_path)
+            if cross_repository_document["comparability"]["reasons"] != [
+                "repository_mismatch"
+            ]:
+                failures.append("cross-repository evidence was not rejected explicitly")
+            if any(
+                entry["status"] != "scenario_incomparable"
+                for entry in cross_repository_document["measurements"]
+            ):
+                failures.append(
+                    "cross-repository evidence unexpectedly exposed comparable measurements"
+                )
+
     return failures
 
 
@@ -798,6 +897,38 @@ def validate_budget_contract(
             ):
                 failures.append("mismatched authoritative evidence did not block budgets")
 
+        tampered_comparison = load_json(original_comparison_path)
+        body_visits = next(
+            entry
+            for entry in tampered_comparison["measurements"]
+            if entry["name"] == "physics.body_visits"
+        )
+        body_visits["candidate"]["value"] = 1000
+        tampered_path = temporary_root / "tampered-comparison.json"
+        tampered_path.write_text(
+            json.dumps(tampered_comparison, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        tampered_output = temporary_root / "tampered-evaluation.json"
+        tampered = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts" / "evaluate_budget.py"),
+                str(policies["pass"]),
+                str(tampered_path),
+                "--output",
+                str(tampered_output),
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if tampered.returncode != 1 or tampered_output.exists():
+            failures.append(
+                "internally contradictory comparison was not rejected before budgeting"
+            )
+
         malformed_policy = load_json(policies["pass"])
         malformed_policy["rules"].append(dict(malformed_policy["rules"][0]))
         malformed_path = temporary_root / "duplicate-rule-policy.json"
@@ -867,7 +998,7 @@ def validate_fixtures(evidence_path: Path | None = None) -> int:
 
     for path in profile_paths:
         document = load_json(path)
-        measurement_entries_examined += len(document.get("measurements", []))
+        measurement_entries_examined += measurement_entry_count(document)
         errors = profile_validation_errors(profile_validator, document)
         if errors:
             failures.append(
@@ -877,10 +1008,7 @@ def validate_fixtures(evidence_path: Path | None = None) -> int:
 
     for path in valid_paths:
         document = load_json(path)
-        measurement_entries_examined += sum(
-            len(document.get("measurements", {}).get(group, []))
-            for group in MEASUREMENT_GROUPS
-        )
+        measurement_entries_examined += measurement_entry_count(document)
         errors = validation_errors(validator, document)
         if errors:
             failures.append(
@@ -890,16 +1018,30 @@ def validate_fixtures(evidence_path: Path | None = None) -> int:
 
     for path in invalid_paths:
         document = load_json(path)
-        measurement_entries_examined += sum(
-            len(document.get("measurements", {}).get(group, []))
-            for group in MEASUREMENT_GROUPS
-        )
+        measurement_entries_examined += measurement_entry_count(document)
         errors = validation_errors(validator, document)
         if not errors:
             failures.append(
                 f"invalid fixture {path.relative_to(ROOT)} unexpectedly passed validation"
             )
 
+    if valid_paths:
+        malformed_measurements = json.loads(json.dumps(load_json(valid_paths[0])))
+        malformed_measurements["measurements"] = None
+        try:
+            malformed_errors = validation_errors(validator, malformed_measurements)
+        except (AttributeError, TypeError) as error:
+            failures.append(
+                "structurally malformed measurements crashed semantic validation: "
+                + str(error)
+            )
+        else:
+            if not malformed_errors:
+                failures.append(
+                    "structurally malformed measurements unexpectedly passed validation"
+                )
+
+    failures.extend(validate_source_state())
     failures.extend(validate_comparison_contract(validator, comparison_validator))
     failures.extend(
         validate_budget_contract(

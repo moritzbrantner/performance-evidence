@@ -11,6 +11,7 @@ from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
 
+from compare_evidence import compare_amplification, compare_measurement
 from validate_schema import load_json
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -64,6 +65,94 @@ def index_by_name(entries: list[dict[str, Any]], label: str) -> dict[str, dict[s
             raise ValueError(f"comparison contains duplicate {label} name {name!r}")
         result[name] = entry
     return result
+
+
+def comparison_semantic_errors(comparison: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    scenario_comparable = comparison["comparability"]["status"] == "comparable"
+    reasons = comparison["comparability"]["reasons"]
+
+    if scenario_comparable and reasons:
+        errors.append("comparable comparison must not declare incomparability reasons")
+    if not scenario_comparable and not reasons:
+        errors.append("incomparable comparison must declare at least one reason")
+
+    obvious_incompatibilities = {
+        "candidate_dirty": comparison["candidate"]["dirty"],
+        "baseline_dirty": comparison["baseline"]["dirty"],
+        "candidate_revision_mismatch": (
+            comparison["comparability"].get("expected_candidate_revision") is not None
+            and comparison["comparability"]["expected_candidate_revision"]
+            != comparison["candidate"]["source_revision"]
+        ),
+        "scenario_mismatch": (
+            comparison["candidate"]["scenario_id"]
+            != comparison["baseline"]["scenario_id"]
+        ),
+        "workload_mismatch": (
+            comparison["candidate"]["workload_id"]
+            != comparison["baseline"]["workload_id"]
+            or comparison["candidate"]["workload_hash"]
+            != comparison["baseline"]["workload_hash"]
+        ),
+        "environment_mismatch": (
+            comparison["candidate"]["environment_fingerprint"]
+            != comparison["baseline"]["environment_fingerprint"]
+        ),
+    }
+    for reason, present in obvious_incompatibilities.items():
+        if present and reason not in reasons:
+            errors.append(f"comparison omits required comparability reason {reason!r}")
+        if present and scenario_comparable:
+            errors.append(f"comparison cannot be comparable while {reason!r} applies")
+
+    try:
+        measurement_entries = index_by_name(
+            comparison["measurements"], "measurement"
+        )
+        amplification_entries = index_by_name(
+            comparison.get("amplifications", []), "amplification"
+        )
+    except ValueError as error:
+        errors.append(str(error))
+        return errors
+
+    expected_measurements: dict[str, dict[str, Any]] = {}
+    baseline_measurements: dict[str, dict[str, Any]] = {}
+    candidate_measurements: dict[str, dict[str, Any]] = {}
+    for name, entry in measurement_entries.items():
+        if entry["baseline"] is not None:
+            baseline_measurements[name] = entry["baseline"]
+        if entry["candidate"] is not None:
+            candidate_measurements[name] = entry["candidate"]
+        expected = compare_measurement(
+            name,
+            entry["baseline"],
+            entry["candidate"],
+            scenario_comparable,
+        )
+        expected_measurements[name] = expected
+        if entry != expected:
+            errors.append(
+                f"measurement comparison {name!r} is inconsistent with its snapshots"
+            )
+
+    for name, entry in amplification_entries.items():
+        expected = compare_amplification(
+            name,
+            entry["numerator"],
+            entry["denominator"],
+            baseline_measurements,
+            candidate_measurements,
+            expected_measurements,
+            scenario_comparable,
+        )
+        if entry != expected:
+            errors.append(
+                f"amplification comparison {name!r} is inconsistent with its operands"
+            )
+
+    return errors
 
 
 def exact_head_verified(comparison: dict[str, Any]) -> bool:
@@ -227,6 +316,12 @@ def evaluate_budget(
         COMPARISON_SCHEMA_PATH,
         "Performance Evidence comparison",
     )
+    semantic_errors = comparison_semantic_errors(comparison)
+    if semantic_errors:
+        raise ValueError(
+            "Performance Evidence comparison is semantically inconsistent:\n  - "
+            + "\n  - ".join(semantic_errors)
+        )
 
     measurements = index_by_name(comparison["measurements"], "measurement")
     amplifications = index_by_name(

@@ -120,6 +120,56 @@ def main() -> int:
                 "no supported measurements",
             )
 
+            whitespace_calls = temporary / "whitespace-calls.out"
+            whitespace_calls.write_text(
+                "events: Ir\nsummary: 1\ncalls = 5 0\ncalls= 7 0\n",
+                encoding="utf-8",
+            )
+            whitespace_result = convert(base, whitespace_calls)
+            cpu_calls = next(
+                entry
+                for entry in whitespace_result["measurements"]["induced_work"]
+                if entry["name"] == "cpu.calls"
+            )
+            if cpu_calls["value"] != 12:
+                raise ValueError("Callgrind calls directives with whitespace were undercounted")
+
+            malformed_calls = temporary / "malformed-calls.out"
+            malformed_calls.write_text(
+                "events: Ir\nsummary: 1\ncalls = nope 0\n",
+                encoding="utf-8",
+            )
+            expect_value_error(
+                lambda: convert(base, malformed_calls),
+                "malformed Callgrind calls directive",
+            )
+
+            cache_a = temporary / "cache-a.out"
+            cache_b = temporary / "cache-b.out"
+            cache_a.write_text(
+                "creator: callgrind-3.22.0\n"
+                "desc: D1 cache: 32768 B, 64 B, 8-way associative\n"
+                "events: Ir\nsummary: 1\n",
+                encoding="utf-8",
+            )
+            cache_b.write_text(
+                "creator: callgrind-3.22.0\n"
+                "desc: D1 cache: 65536 B, 64 B, 8-way associative\n"
+                "events: Ir\nsummary: 1\n",
+                encoding="utf-8",
+            )
+            cache_a_result = convert(base, cache_a)
+            cache_b_result = convert(base, cache_b)
+            if (
+                cache_a_result["environment"]["fingerprint"]
+                == cache_b_result["environment"]["fingerprint"]
+            ):
+                raise ValueError("Callgrind cache configuration did not affect environment identity")
+            if cache_a_result["extensions"]["rust.callgrind"].get("cache_configuration") != [
+                "D1 cache: 32768 B, 64 B, 8-way associative"
+            ]:
+                raise ValueError("Callgrind cache configuration was not preserved")
+
             override = convert(
                 base,
                 callgrind_path,

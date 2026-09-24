@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import copy
 import json
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 from summarize_agent_evidence import summarize_documents
@@ -39,12 +41,35 @@ def set_measurement(document: dict, name: str, value: int | float) -> None:
     raise ValueError(f"fixture does not contain {name}")
 
 
+def distinct_attempts(document: dict, count: int) -> list[dict]:
+    result: list[dict] = []
+    for index in range(count):
+        item = copy.deepcopy(document)
+        extension = item["extensions"]["agent.execution"]
+        extension["attempt_id"] = f"scaling-attempt-{index + 1}"
+        extension["run_id"] = f"scaling-run-{index + 1}"
+        extension["attempt_number"] = 1
+        result.append(item)
+    return result
+
+
+def expect_value_error(action, expected_fragment: str) -> None:
+    try:
+        action()
+    except ValueError as error:
+        if expected_fragment not in str(error):
+            raise
+    else:
+        raise ValueError(f"expected ValueError containing {expected_fragment!r}")
+
+
 def main() -> int:
     try:
         first = load_fixture()
         second = copy.deepcopy(first)
         second_extension = second["extensions"]["agent.execution"]
         second_extension["run_id"] = "018f5d43-4d1c-7fd5-aed5-d451fd71c111"
+        second_extension["attempt_id"] = "018f5d43-4d1c-7fd5-aed5-d451fd71c111-attempt-2"
         second_extension["attempt_number"] = 2
         second_extension["model"] = "gpt-5.6-pro"
         second_extension["outcome"] = "failed"
@@ -80,14 +105,29 @@ def main() -> int:
         if rollup["summary"] != reversed_rollup["summary"]:
             raise ValueError("rollup summary must be independent of file traversal order")
 
+        duplicate_rollup = summarize_documents([first, copy.deepcopy(first)])
+        if duplicate_rollup["summary"]["attempt_count"] != 1:
+            raise ValueError("duplicate attempt evidence inflated attempt_count")
+        if duplicate_rollup["summary"]["observed_totals"] != summarize_documents([first])["summary"]["observed_totals"]:
+            raise ValueError("duplicate attempt evidence inflated observed totals")
+        if duplicate_rollup["work"]["duplicate_documents_ignored"] != 1:
+            raise ValueError("duplicate attempt evidence was not reported as ignored")
+
+        conflicting = copy.deepcopy(first)
+        conflicting["extensions"]["agent.execution"]["model"] = "conflicting-model"
+        expect_value_error(
+            lambda: summarize_documents([first, conflicting]),
+            "conflicting evidence for the same agent attempt identity",
+        )
+
         # Deterministic cost smoke: work accounting must scale exactly with input size.
         # This avoids a brittle wall-clock CI budget while catching accidental rescans.
         entries_per_document = sum(
             len(first["measurements"][group])
             for group in ("useful_work", "induced_work", "outcomes")
         )
-        thousand = summarize_documents([first] * 1000)
-        two_thousand = summarize_documents([first] * 2000)
+        thousand = summarize_documents(distinct_attempts(first, 1000))
+        two_thousand = summarize_documents(distinct_attempts(first, 2000))
         if thousand["work"]["measurement_entries_examined"] != entries_per_document * 1000:
             raise ValueError("1000-attempt work accounting is not one-pass")
         if two_thousand["work"]["measurement_entries_examined"] != entries_per_document * 2000:
@@ -97,6 +137,49 @@ def main() -> int:
             != 2 * thousand["work"]["measurement_entries_examined"]
         ):
             raise ValueError("rollup work does not scale linearly with attempt count")
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            input_dir = Path(temporary_directory)
+            (input_dir / "attempt.json").write_text(
+                json.dumps(first, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            output_path = input_dir / "rollup.json"
+            command = [
+                sys.executable,
+                str(ROOT / "scripts" / "summarize_agent_evidence.py"),
+                str(input_dir),
+                "--output",
+                str(output_path),
+            ]
+            first_run = subprocess.run(
+                command,
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            if first_run.returncode != 0:
+                raise ValueError(
+                    "first in-place rollup failed: "
+                    + (first_run.stderr.strip() or first_run.stdout.strip())
+                )
+            first_output = output_path.read_text(encoding="utf-8")
+
+            second_run = subprocess.run(
+                command,
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            if second_run.returncode != 0:
+                raise ValueError(
+                    "second in-place rollup failed: "
+                    + (second_run.stderr.strip() or second_run.stdout.strip())
+                )
+            if output_path.read_text(encoding="utf-8") != first_output:
+                raise ValueError("in-place rollup is not idempotent across repeated runs")
     except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as error:
         print(f"Agent rollup validation failed: {error}", file=sys.stderr)
         return 1
