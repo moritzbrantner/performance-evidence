@@ -78,6 +78,7 @@ def parse_callgrind(path: Path) -> dict[str, Any]:
     events: list[str] | None = None
     summary_values: list[int] | None = None
     creator: str | None = None
+    cache_configuration: list[str] = []
     calls_total = 0
     calls_directives = 0
 
@@ -106,9 +107,16 @@ def parse_callgrind(path: Path) -> dict[str, Any]:
                 for token in tokens
             ]
             continue
+        if line.startswith("desc:"):
+            description = " ".join(line.split(":", 1)[1].split())
+            if "cache" in description.lower() and description not in cache_configuration:
+                cache_configuration.append(description)
+            continue
 
-        calls_match = re.match(r"^calls=(\d+)(?:\s|$)", line)
-        if calls_match:
+        if re.match(r"^calls\s*=", line):
+            calls_match = re.match(r"^calls\s*=\s*(\d+)(?:\s+.*)?$", line)
+            if calls_match is None:
+                raise ValueError(f"malformed Callgrind calls directive: {line!r}")
             calls_total += parse_nonnegative_integer(
                 calls_match.group(1), "Callgrind calls count"
             )
@@ -128,6 +136,7 @@ def parse_callgrind(path: Path) -> dict[str, Any]:
         "creator": creator,
         "events": events,
         "summary": dict(zip(events, summary_values, strict=True)),
+        "cache_configuration": sorted(cache_configuration),
         "calls_total": calls_total,
         "calls_directives": calls_directives,
     }
@@ -212,14 +221,15 @@ def adapter_environment(
         "version": COLLECTOR_VERSION,
     }
     result["collector"] = collector
-    result["fingerprint"] = sha256_value(
-        {
-            "base_fingerprint": environment["fingerprint"],
-            "collector": collector,
-            "callgrind_creator": parsed["creator"],
-            "events": parsed["events"],
-        }
-    )
+    fingerprint_inputs = {
+        "base_fingerprint": environment["fingerprint"],
+        "collector": collector,
+        "callgrind_creator": parsed["creator"],
+        "events": parsed["events"],
+    }
+    if parsed["cache_configuration"]:
+        fingerprint_inputs["cache_configuration"] = parsed["cache_configuration"]
+    result["fingerprint"] = sha256_value(fingerprint_inputs)
     return result
 
 
@@ -269,13 +279,16 @@ def convert(
     extensions = dict(output.get("extensions", {}))
     if "rust.callgrind" in extensions:
         raise ValueError("base evidence already defines rust.callgrind extension")
-    extensions["rust.callgrind"] = {
+    callgrind_extension = {
         "adapter_contract": ADAPTER_CONTRACT,
         "creator": parsed["creator"],
         "events": parsed["events"],
         "unmapped_events": unmapped_events,
         "calls_directives": parsed["calls_directives"],
     }
+    if parsed["cache_configuration"]:
+        callgrind_extension["cache_configuration"] = parsed["cache_configuration"]
+    extensions["rust.callgrind"] = callgrind_extension
     output["extensions"] = extensions
 
     validate_evidence(output, "converted evidence")
