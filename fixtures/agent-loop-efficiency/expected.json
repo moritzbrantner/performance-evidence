@@ -5,7 +5,7 @@
     "description": "One coding-agent implementation attempt measured for computational cost and time-to-green.",
     "workload": {
       "id": "repository-task-v1",
-      "hash": "sha256:5b2eb6ac84a9011d72769372ca7284bba15e90f4e75ff7e58f3b5db937da7c8b",
+      "hash": "sha256:345e656a1cd1a65c0763f328e2f5629476ed853599c16a8f8d544fdf8e092a83",
       "parameters": {
         "task_id": "018f5d42-7c2a-7b37-a912-3c7343db8b3f",
         "project_id": "physics-engine",
