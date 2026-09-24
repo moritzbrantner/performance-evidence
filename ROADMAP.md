@@ -77,7 +77,7 @@ The machine-readable artifact is authoritative. Markdown reports and GitHub Page
 
 ## Slice 5 — .NET adapter
 
-- [ ] Map BenchmarkDotNet allocation/GC diagnostics into the common evidence model.
+- [x] Map BenchmarkDotNet allocation/GC diagnostics into the common evidence model.
 - [ ] Support EventPipe/dotnet diagnostics as richer optional artifacts.
 - [ ] Define a small semantic-counter bridge for domain work such as rows scanned/materialized and cache rebuilds.
 - [ ] Keep reference-hardware counters separate from portable deterministic evidence when comparability is weak.
