@@ -108,6 +108,7 @@
               "candidate_dirty",
               "baseline_dirty",
               "candidate_revision_mismatch",
+              "repository_mismatch",
               "scenario_mismatch",
               "workload_mismatch",
               "environment_mismatch",
