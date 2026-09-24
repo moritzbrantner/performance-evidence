@@ -4,7 +4,9 @@
 
 ## Comparability
 
-A comparison is fail-closed when either input is dirty, the scenario or workload identity differs, the environment fingerprint differs, an explicitly expected candidate revision does not match, or the candidate declares a different baseline revision/digest.
+A comparison is fail-closed when either input is dirty, the source repository differs, the scenario or workload identity differs, the environment fingerprint differs, an explicitly expected candidate revision does not match, or the candidate declares a different baseline revision/digest.
+
+The derived artifact preserves the repository, workload seed/parameters, and declared-baseline inputs needed to recompute those comparability decisions. Budget consumers therefore verify the stored status and reasons from preserved provenance instead of trusting opaque derived flags.
 
 For merge or integration decisions, callers should pass the reviewed head through `--expected-candidate-revision`. This binds the candidate evidence to the exact revision under review without making this repository responsible for discovering Git state.
 
