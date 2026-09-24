@@ -69,6 +69,7 @@ def main() -> int:
         second = copy.deepcopy(first)
         second_extension = second["extensions"]["agent.execution"]
         second_extension["run_id"] = "018f5d43-4d1c-7fd5-aed5-d451fd71c111"
+        second_extension["attempt_id"] = "018f5d43-4d1c-7fd5-aed5-d451fd71c111-attempt-2"
         second_extension["attempt_number"] = 2
         second_extension["model"] = "gpt-5.6-pro"
         second_extension["outcome"] = "failed"
