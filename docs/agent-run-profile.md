@@ -72,7 +72,11 @@ Direct repository and CI use does not require an orchestrator or an evidence env
 
 ## Environment identity
 
-The canonical environment fingerprint should be derived deterministically from semantic execution-environment evidence already produced by the orchestrator. Provider/model may be included when they materially define execution behavior. Raw host names, timestamps, temporary paths, session IDs, credentials, or other ambient state must not affect the fingerprint.
+The canonical environment fingerprint is derived deterministically from semantic execution-environment evidence already produced by the orchestrator. For `agent-run/v1`, provider and model are deliberately **treatment metadata**, not environment identity: changing the routing choice must not by itself make two otherwise equivalent attempts incomparable. Provider/model remain preserved in `extensions["agent.execution"]`.
+
+Repository identity is normalized before it enters both source provenance and workload identity. Supported GitHub remote spellings therefore describe the same workload instead of producing artificial workload mismatches.
+
+Raw host names, timestamps, temporary paths, session IDs, credentials, or other ambient state must not affect the fingerprint.
 
 ## Next integration steps
 
