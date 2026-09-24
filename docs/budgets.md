@@ -20,7 +20,9 @@ Rules can evaluate:
 - `absolute_regression_max`: `candidate - baseline` must not exceed a maximum regression;
 - `relative_regression_max`: the normalized comparison delta must not exceed a maximum regression.
 
-A missing target, incomparable measurement, zero-baseline relative delta, or otherwise unavailable value is never converted to zero. For a hard rule it blocks evaluation rather than passing.
+Amplification targets bind the expected numerator and denominator in the policy as well as the ratio name. A comparison cannot satisfy a hard budget by reusing the same ratio name for different operands.
+
+A missing target, incomparable measurement, zero-baseline relative delta, mismatched amplification definition, or otherwise unavailable value is never converted to zero. For a hard rule it blocks evaluation rather than passing. Budget evaluations also retain the SHA-256 digest of the exact comparison artifact they consumed.
 
 ## Exact head and retries
 

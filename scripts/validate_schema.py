@@ -823,6 +823,10 @@ def validate_budget_contract(
 
         passing = evaluate("pass", policies["pass"], 0)
         if passing is not None:
+            if passing["comparison"].get("sha256") != sha256_bytes(
+                comparison_path.read_bytes()
+            ):
+                failures.append("budget evaluation did not preserve comparison digest")
             if passing["status"] != "pass":
                 failures.append("passing budget fixture did not produce status=pass")
             if passing["execution"] != {
@@ -864,6 +868,51 @@ def validate_budget_contract(
             failures.append("zero-baseline relative hard budget did not remain unavailable")
 
         original_comparison_path = comparison_path
+
+        redefined_path = temporary_root / "redefined-amplification-comparison.json"
+        redefined_command = [
+            sys.executable,
+            str(ROOT / "scripts" / "compare_evidence.py"),
+            str(baseline_path),
+            str(candidate_path),
+            "--expected-candidate-revision",
+            "1111111111111111111111111111111111111111",
+            "--amplification",
+            "physics.body_visits_per_changed_body=physics.changed_bodies,physics.body_visits",
+            "--output",
+            str(redefined_path),
+        ]
+        redefined_result = subprocess.run(
+            redefined_command,
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if redefined_result.returncode != 0:
+            failures.append(
+                "redefined amplification comparison failed: "
+                + (redefined_result.stderr.strip() or redefined_result.stdout.strip())
+            )
+        else:
+            comparison_path = redefined_path
+            redefined = evaluate(
+                "amplification-definition-mismatch",
+                policies["pass"],
+                2,
+            )
+            comparison_path = original_comparison_path
+            if redefined is not None and (
+                redefined["status"] != "blocked"
+                or redefined["summary"]["hard_blocked"] != 1
+                or redefined["rules"][1]["status"] != "unavailable"
+                or "definition does not match"
+                not in (redefined["rules"][1]["reason"] or "")
+            ):
+                failures.append(
+                    "redefined amplification name unexpectedly satisfied its budget"
+                )
+
         mismatch_path = temporary_root / "mismatch-comparison.json"
         mismatch_command = [
             sys.executable,
@@ -986,6 +1035,38 @@ def validate_budget_contract(
         if incomplete_result.returncode != 1 or incomplete_output.exists():
             failures.append(
                 "comparison missing self-describing provenance was not rejected"
+            )
+
+        unbound_policy = load_json(policies["pass"])
+        amplification_rule = next(
+            rule
+            for rule in unbound_policy["rules"]
+            if rule["target"]["kind"] == "amplification"
+        )
+        amplification_rule["target"].pop("denominator")
+        unbound_path = temporary_root / "unbound-amplification-policy.json"
+        unbound_path.write_text(
+            json.dumps(unbound_policy, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        unbound_output = temporary_root / "unbound-amplification-evaluation.json"
+        unbound = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts" / "evaluate_budget.py"),
+                str(unbound_path),
+                str(original_comparison_path),
+                "--output",
+                str(unbound_output),
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if unbound.returncode != 1 or unbound_output.exists():
+            failures.append(
+                "amplification budget without bound operands did not fail closed"
             )
 
         malformed_policy = load_json(policies["pass"])

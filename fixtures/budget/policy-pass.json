@@ -23,7 +23,9 @@
       "id": "body-visits-amplification-no-regression",
       "target": {
         "kind": "amplification",
-        "name": "physics.body_visits_per_changed_body"
+        "name": "physics.body_visits_per_changed_body",
+        "numerator": "physics.body_visits",
+        "denominator": "physics.changed_bodies"
       },
       "mode": "hard",
       "assertion": {
