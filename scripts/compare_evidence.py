@@ -74,6 +74,8 @@ def comparability_reasons(
         and candidate["source"]["revision"] != expected_candidate_revision
     ):
         reasons.append("candidate_revision_mismatch")
+    if candidate["source"].get("repository") != baseline["source"].get("repository"):
+        reasons.append("repository_mismatch")
     if candidate["scenario"]["id"] != baseline["scenario"]["id"]:
         reasons.append("scenario_mismatch")
     if workload_identity(candidate) != workload_identity(baseline):
