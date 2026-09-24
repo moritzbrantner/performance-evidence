@@ -747,6 +747,62 @@ def validate_comparison_contract(
                     "cross-repository evidence unexpectedly exposed comparable measurements"
                 )
 
+        overflow_baseline = load_json(baseline_path)
+        overflow_candidate = load_json(candidate_path)
+        for document in (overflow_baseline, overflow_candidate):
+            next(
+                entry
+                for entry in document["measurements"]["induced_work"]
+                if entry["name"] == "physics.body_visits"
+            )["value"] = 1e308
+            next(
+                entry
+                for entry in document["measurements"]["useful_work"]
+                if entry["name"] == "physics.changed_bodies"
+            )["value"] = 1e-308
+        overflow_candidate.pop("baseline", None)
+        overflow_baseline_path = (
+            Path(temporary_directory) / "overflow-baseline.json"
+        )
+        overflow_candidate_path = (
+            Path(temporary_directory) / "overflow-candidate.json"
+        )
+        overflow_output = Path(temporary_directory) / "overflow-comparison.json"
+        overflow_baseline_path.write_text(
+            json.dumps(overflow_baseline, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        overflow_candidate_path.write_text(
+            json.dumps(overflow_candidate, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        overflow = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts" / "compare_evidence.py"),
+                str(overflow_baseline_path),
+                str(overflow_candidate_path),
+                "--expected-candidate-revision",
+                "1111111111111111111111111111111111111111",
+                "--amplification",
+                "overflow=physics.body_visits,physics.changed_bodies",
+                "--output",
+                str(overflow_output),
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if (
+            overflow.returncode != 1
+            or overflow_output.exists()
+            or "non-finite" not in overflow.stderr
+        ):
+            failures.append(
+                "derived numeric overflow did not fail closed before serialization"
+            )
+
     return failures
 
 
@@ -1219,6 +1275,61 @@ def validate_fixtures(evidence_path: Path | None = None) -> int:
                 failures.append(
                     "structurally malformed measurements unexpectedly passed validation"
                 )
+
+    if valid_paths:
+        template = json.loads(json.dumps(load_json(valid_paths[0])))
+
+        nonfinite = json.loads(json.dumps(template))
+        first_group = next(
+            group
+            for group in MEASUREMENT_GROUPS
+            if nonfinite["measurements"][group]
+        )
+        nonfinite["measurements"][first_group][0]["value"] = float("nan")
+        nonfinite_errors = validation_errors(validator, nonfinite)
+        if not any("must be finite" in error for error in nonfinite_errors):
+            failures.append("non-finite canonical measurement unexpectedly passed")
+
+        unsafe_artifact = json.loads(json.dumps(template))
+        unsafe_artifact["artifacts"] = [
+            {
+                "kind": "trace",
+                "path": "../outside/trace.json",
+                "sha256": "sha256:" + "0" * 64,
+            }
+        ]
+        unsafe_errors = validation_errors(validator, unsafe_artifact)
+        if not any(
+            "portable relative POSIX path" in error for error in unsafe_errors
+        ):
+            failures.append("artifact traversal path unexpectedly passed validation")
+
+        duplicate_artifact = json.loads(json.dumps(template))
+        duplicate_artifact["artifacts"] = [
+            {
+                "kind": "trace",
+                "path": "artifacts/profile.json",
+                "sha256": "sha256:" + "0" * 64,
+            },
+            {
+                "kind": "heap",
+                "path": "artifacts/profile.json",
+                "sha256": "sha256:" + "1" * 64,
+            },
+        ]
+        duplicate_errors = validation_errors(validator, duplicate_artifact)
+        if not any("duplicates artifacts" in error for error in duplicate_errors):
+            failures.append("duplicate artifact path unexpectedly passed validation")
+
+        with tempfile.TemporaryDirectory() as strict_json_directory:
+            nonstandard_path = Path(strict_json_directory) / "nonstandard.json"
+            nonstandard_path.write_text('{"value": NaN}\n', encoding="utf-8")
+            try:
+                load_json(nonstandard_path)
+            except ValueError:
+                pass
+            else:
+                failures.append("non-standard NaN JSON unexpectedly parsed")
 
     failures.extend(validate_source_state())
     failures.extend(validate_comparison_contract(validator, comparison_validator))
