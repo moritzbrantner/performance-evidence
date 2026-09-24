@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import copy
 import json
-import tempfile
 from pathlib import Path
 
 from jsonschema import Draft202012Validator, FormatChecker
@@ -187,16 +186,25 @@ def main() -> int:
             "unsupported fields",
         )
 
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            portable = str(Path(temporary_directory) / "portable.json")
-            override = merge(
+        portable = "profiles/portable.json"
+        override = merge(
+            base,
+            fragment,
+            fragment_bytes,
+            portable,
+        )
+        if override["artifacts"][-1]["path"] != portable:
+            raise ValueError("counter bridge artifact-path override was not preserved")
+
+        expect_value_error(
+            lambda: merge(
                 base,
                 fragment,
                 fragment_bytes,
-                portable,
-            )
-            if override["artifacts"][-1]["path"] != portable:
-                raise ValueError("counter bridge artifact-path override was not preserved")
+                "/tmp/non-portable.json",
+            ),
+            "portable relative POSIX path",
+        )
 
         extension_collision = copy.deepcopy(base)
         extension_collision["extensions"] = {
