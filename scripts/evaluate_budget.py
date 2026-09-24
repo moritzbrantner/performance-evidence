@@ -69,42 +69,94 @@ def index_by_name(entries: list[dict[str, Any]], label: str) -> dict[str, dict[s
 
 def comparison_semantic_errors(comparison: dict[str, Any]) -> list[str]:
     errors: list[str] = []
-    scenario_comparable = comparison["comparability"]["status"] == "comparable"
+    candidate_identity = comparison["candidate"]
+    baseline_identity = comparison["baseline"]
+    self_describing_fields = (
+        "source_repository",
+        "workload_seed",
+        "workload_parameters",
+        "declared_baseline",
+    )
+    for label, identity in (
+        ("candidate", candidate_identity),
+        ("baseline", baseline_identity),
+    ):
+        missing = [field for field in self_describing_fields if field not in identity]
+        if missing:
+            errors.append(
+                f"{label} identity is missing comparability inputs: "
+                + ", ".join(missing)
+            )
+    if errors:
+        return errors
+
+    expected_reasons: list[str] = []
+    if candidate_identity["dirty"]:
+        expected_reasons.append("candidate_dirty")
+    if baseline_identity["dirty"]:
+        expected_reasons.append("baseline_dirty")
+
+    expected_revision = comparison["comparability"].get(
+        "expected_candidate_revision"
+    )
+    if (
+        expected_revision is not None
+        and expected_revision != candidate_identity["source_revision"]
+    ):
+        expected_reasons.append("candidate_revision_mismatch")
+
+    if (
+        candidate_identity["source_repository"]
+        != baseline_identity["source_repository"]
+    ):
+        expected_reasons.append("repository_mismatch")
+    if candidate_identity["scenario_id"] != baseline_identity["scenario_id"]:
+        expected_reasons.append("scenario_mismatch")
+
+    candidate_workload = (
+        candidate_identity["workload_id"],
+        candidate_identity["workload_hash"],
+        candidate_identity["workload_seed"],
+        candidate_identity["workload_parameters"],
+    )
+    baseline_workload = (
+        baseline_identity["workload_id"],
+        baseline_identity["workload_hash"],
+        baseline_identity["workload_seed"],
+        baseline_identity["workload_parameters"],
+    )
+    if candidate_workload != baseline_workload:
+        expected_reasons.append("workload_mismatch")
+
+    if (
+        candidate_identity["environment_fingerprint"]
+        != baseline_identity["environment_fingerprint"]
+    ):
+        expected_reasons.append("environment_mismatch")
+
+    declared_baseline = candidate_identity["declared_baseline"]
+    if declared_baseline is not None and (
+        declared_baseline["source_revision"]
+        != baseline_identity["source_revision"]
+        or declared_baseline["evidence_hash"]
+        != baseline_identity["evidence_hash"]
+    ):
+        expected_reasons.append("declared_baseline_mismatch")
+
     reasons = comparison["comparability"]["reasons"]
+    if reasons != expected_reasons:
+        errors.append(
+            "comparability reasons do not match preserved provenance inputs: "
+            f"expected {expected_reasons!r}, got {reasons!r}"
+        )
 
-    if scenario_comparable and reasons:
-        errors.append("comparable comparison must not declare incomparability reasons")
-    if not scenario_comparable and not reasons:
-        errors.append("incomparable comparison must declare at least one reason")
-
-    obvious_incompatibilities = {
-        "candidate_dirty": comparison["candidate"]["dirty"],
-        "baseline_dirty": comparison["baseline"]["dirty"],
-        "candidate_revision_mismatch": (
-            comparison["comparability"].get("expected_candidate_revision") is not None
-            and comparison["comparability"]["expected_candidate_revision"]
-            != comparison["candidate"]["source_revision"]
-        ),
-        "scenario_mismatch": (
-            comparison["candidate"]["scenario_id"]
-            != comparison["baseline"]["scenario_id"]
-        ),
-        "workload_mismatch": (
-            comparison["candidate"]["workload_id"]
-            != comparison["baseline"]["workload_id"]
-            or comparison["candidate"]["workload_hash"]
-            != comparison["baseline"]["workload_hash"]
-        ),
-        "environment_mismatch": (
-            comparison["candidate"]["environment_fingerprint"]
-            != comparison["baseline"]["environment_fingerprint"]
-        ),
-    }
-    for reason, present in obvious_incompatibilities.items():
-        if present and reason not in reasons:
-            errors.append(f"comparison omits required comparability reason {reason!r}")
-        if present and scenario_comparable:
-            errors.append(f"comparison cannot be comparable while {reason!r} applies")
+    expected_status = "comparable" if not expected_reasons else "incomparable"
+    if comparison["comparability"]["status"] != expected_status:
+        errors.append(
+            "comparability status does not match preserved provenance inputs: "
+            f"expected {expected_status!r}"
+        )
+    scenario_comparable = expected_status == "comparable"
 
     try:
         measurement_entries = index_by_name(
