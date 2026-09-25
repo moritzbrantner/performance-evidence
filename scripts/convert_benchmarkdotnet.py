@@ -12,7 +12,7 @@ from typing import Any
 
 from input_snapshot import read_input_snapshot
 from output_paths import validate_output_path, write_text_atomic
-from validate_schema import (
+from schema_validation import (
     SCHEMA_PATH,
     load_json,
     load_json_bytes,
