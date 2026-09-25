@@ -7,14 +7,14 @@ import copy
 import hashlib
 import json
 import sys
+from functools import cache
 from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
 
 from output_paths import validate_output_path
-
-from validate_schema import validation_errors
+from validate_schema import load_json, validation_errors, validator_for_schema
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,15 +35,13 @@ def load_json_object(path: Path) -> dict[str, Any]:
     return value
 
 
+@cache
 def canonical_schema() -> dict[str, Any]:
-    return json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    return load_json(SCHEMA_PATH)
 
 
 def validate_evidence(document: dict[str, Any], label: str) -> None:
-    schema = canonical_schema()
-    Draft202012Validator.check_schema(schema)
-    validator = Draft202012Validator(schema, format_checker=FormatChecker())
-    errors = validation_errors(validator, document)
+    errors = validation_errors(validator_for_schema(SCHEMA_PATH), document)
     if errors:
         raise ValueError(
             label
