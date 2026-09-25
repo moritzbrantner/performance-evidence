@@ -7,12 +7,16 @@ from validate_rust_callgrind_adapter import main as validate_rust_callgrind
 from validate_dhat_adapter import main as validate_dhat
 from validate_application_counters import main as validate_application_counters
 from validate_benchmarkdotnet_adapter import main as validate_benchmarkdotnet
+from validate_output_paths import main as validate_output_paths
 
 
 def main() -> int:
     agent = validate_agent_landscape()
     if agent != 0:
         return agent
+    output_paths = validate_output_paths()
+    if output_paths != 0:
+        return output_paths
     callgrind = validate_rust_callgrind()
     if callgrind != 0:
         return callgrind
