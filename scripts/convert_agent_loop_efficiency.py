@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from output_paths import write_text_atomic
-from validate_schema import validation_errors, validator_for_schema
+from schema_validation import validation_errors, validator_for_schema
 
 
 ROOT = Path(__file__).resolve().parents[1]
