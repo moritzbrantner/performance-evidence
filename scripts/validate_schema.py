@@ -12,6 +12,7 @@ import platform
 import subprocess
 import sys
 import tempfile
+from functools import cache
 from pathlib import Path
 from typing import Any
 
@@ -40,6 +41,13 @@ def reject_json_constant(value: str) -> None:
 def load_json(path: Path) -> Any:
     with path.open("r", encoding="utf-8") as handle:
         return json.load(handle, parse_constant=reject_json_constant)
+
+
+@cache
+def validator_for_schema(path: Path) -> Draft202012Validator:
+    schema = load_json(path)
+    Draft202012Validator.check_schema(schema)
+    return Draft202012Validator(schema, format_checker=FormatChecker())
 
 
 def format_path(parts: list[Any]) -> str:
