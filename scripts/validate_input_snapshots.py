@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import shutil
 import sys
 import tempfile
 from pathlib import Path
