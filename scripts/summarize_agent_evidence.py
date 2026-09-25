@@ -11,10 +11,8 @@ from pathlib import Path
 from statistics import median
 from typing import Any, Iterable
 
-from jsonschema import Draft202012Validator, FormatChecker
-
 from output_paths import write_text_atomic
-from validate_schema import validation_errors
+from validate_schema import validation_errors, validator_for_schema
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -49,12 +47,15 @@ def sha256_bytes(contents: bytes) -> str:
     return "sha256:" + hashlib.sha256(contents).hexdigest()
 
 
-def input_digest(documents: Iterable[dict[str, Any]]) -> str:
-    hashes = sorted(sha256_bytes(canonical_json(document)) for document in documents)
+def input_digest(document_hashes: Iterable[str]) -> str:
+    hashes = sorted(document_hashes)
     return sha256_bytes(("\n".join(hashes) + "\n").encode("utf-8"))
 
 
-def attempt_identity(document: dict[str, Any]) -> tuple[str, str]:
+def attempt_identity(
+    document: dict[str, Any],
+    document_hash: str,
+) -> tuple[str, str]:
     extension_root = document.get("extensions")
     extension = (
         extension_root.get(EXTENSION_NAMESPACE)
@@ -77,28 +78,31 @@ def attempt_identity(document: dict[str, Any]) -> tuple[str, str]:
         ):
             return ("run_attempt", f"{run_id}:{attempt_number}")
 
-    return ("document_hash", sha256_bytes(canonical_json(document)))
+    return ("document_hash", document_hash)
 
 
 def deduplicate_documents(
     documents: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
+) -> tuple[list[dict[str, Any]], list[str]]:
     unique: list[dict[str, Any]] = []
+    unique_hashes: list[str] = []
     seen: dict[tuple[str, str], bytes] = {}
     for document in documents:
-        identity = attempt_identity(document)
         encoded = canonical_json(document)
+        document_hash = sha256_bytes(encoded)
+        identity = attempt_identity(document, document_hash)
         previous = seen.get(identity)
         if previous is None:
             seen[identity] = encoded
             unique.append(document)
+            unique_hashes.append(document_hash)
             continue
         if previous != encoded:
             raise ValueError(
                 "conflicting evidence for the same agent attempt identity "
                 f"{identity[0]}={identity[1]!r}"
             )
-    return unique
+    return unique, unique_hashes
 
 
 def measurement_index(document: dict[str, Any]) -> tuple[dict[str, dict[str, Any]], int]:
@@ -157,7 +161,7 @@ def increment(counter: Counter[str], value: Any, *, missing: str = "<missing>") 
 
 def summarize_documents(documents: list[dict[str, Any]]) -> dict[str, Any]:
     loaded_document_count = len(documents)
-    documents = deduplicate_documents(documents)
+    documents, document_hashes = deduplicate_documents(documents)
 
     provider_counts: Counter[str] = Counter()
     model_counts: Counter[str] = Counter()
@@ -245,7 +249,7 @@ def summarize_documents(documents: list[dict[str, Any]]) -> dict[str, Any]:
         "schema_version": 1,
         "kind": "agent-efficiency-rollup",
         "profile": "agent-run/v1",
-        "input_digest": input_digest(documents),
+        "input_digest": input_digest(document_hashes),
         "summary": {
             "attempt_count": attempt_count,
             "candidate_count": candidate_count,
@@ -294,8 +298,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     try:
-        schema = load_json(SCHEMA_PATH)
-        validator = Draft202012Validator(schema, format_checker=FormatChecker())
+        validator = validator_for_schema(SCHEMA_PATH)
         paths = find_evidence(args.input_dir, args.output)
         if not paths:
             raise ValueError(f"no JSON evidence found below {args.input_dir}")
