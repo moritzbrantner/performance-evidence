@@ -69,6 +69,8 @@ Rust repositories can enrich canonical evidence with deterministic instruction/c
 
 Allocation and copy profiling can use the [`dhat/v1` adapter](docs/dhat-adapter.md). It supports Valgrind DHAT heap/copy output and Rust DHAT heap output, preserving unavailable profiler fields as missing evidence rather than manufactured zeroes.
 
+.NET repositories can attach BenchmarkDotNet MemoryDiagnoser allocation/GC data with the [`benchmarkdotnet-memory/v1` adapter](docs/benchmarkdotnet-adapter.md). It preserves raw collection counts and total operations, keeps unavailable allocation telemetry missing, and leaves timing in the hashed raw artifact rather than turning shared-runner latency into deterministic authority.
+
 Repository-owned traversals, materializations, snapshots, recomputations, bytes moved, and similar semantic work can be attached with the [`application-counters/v1` bridge](docs/application-counters.md). The bridge accepts canonical measurement fragments rather than defining a parallel counter vocabulary.
 
 The canonical contract is dogfooded by [physics-engine](docs/adoption-physics-engine.md), which emits deterministic sandbox/browser evidence with repository-owned solver counters and validates the bundle against an exact pinned Performance Evidence revision.

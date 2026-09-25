@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0.0",
+  "scenario": {
+    "id": "table/materialize-1000",
+    "description": "Materialize a deterministic 1000-row table workload.",
+    "workload": {
+      "id": "materialize-1000",
+      "hash": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "parameters": {
+        "rows": 1000
+      }
+    }
+  },
+  "source": {
+    "repository": "https://github.com/example/dotnet-table",
+    "revision": "3333333333333333333333333333333333333333",
+    "dirty": false
+  },
+  "environment": {
+    "fingerprint": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "platform": {
+      "os": "linux",
+      "arch": "x86_64"
+    },
+    "toolchain": {
+      "dotnet": "10.0.100"
+    },
+    "collector": {
+      "name": "dotnet-table-fixture",
+      "version": "1.0.0"
+    }
+  },
+  "measurements": {
+    "useful_work": [
+      {
+        "name": "table.rows_materialized",
+        "value": 1000,
+        "unit": "count",
+        "measurement_type": "counter"
+      }
+    ],
+    "induced_work": [
+      {
+        "name": "table.rows_scanned",
+        "value": 1000,
+        "unit": "count",
+        "measurement_type": "counter"
+      }
+    ],
+    "outcomes": []
+  }
+}

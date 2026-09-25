@@ -1,0 +1,54 @@
+{
+  "Title": "TableBenchmarks",
+  "HostEnvironmentInfo": {
+    "BenchmarkDotNetCaption": "BenchmarkDotNet",
+    "BenchmarkDotNetVersion": "0.15.8-fixture",
+    "OsVersion": "Linux fixture",
+    "ProcessorName": "Fixture CPU",
+    "PhysicalProcessorCount": 1,
+    "PhysicalCoreCount": 4,
+    "LogicalCoreCount": 8,
+    "RuntimeVersion": ".NET 10.0.0",
+    "Architecture": "X64",
+    "HasAttachedDebugger": false,
+    "HasRyuJit": true,
+    "Configuration": "RELEASE",
+    "DotNetCliVersion": "10.0.100"
+  },
+  "Benchmarks": [
+    {
+      "DisplayInfo": "TableBenchmarks.Materialize: DefaultJob(N=1000)",
+      "Namespace": "Example",
+      "Type": "TableBenchmarks",
+      "Method": "Materialize",
+      "MethodTitle": "Materialize",
+      "Parameters": "N=1000",
+      "FullName": "Example.TableBenchmarks.Materialize",
+      "HardwareIntrinsics": "AVX2",
+      "Memory": {
+        "Gen0Collections": 3,
+        "Gen1Collections": 1,
+        "Gen2Collections": 0,
+        "TotalOperations": 1000,
+        "BytesAllocatedPerOperation": 256
+      }
+    },
+    {
+      "DisplayInfo": "TableBenchmarks.Scan: DefaultJob(N=1000)",
+      "Namespace": "Example",
+      "Type": "TableBenchmarks",
+      "Method": "Scan",
+      "MethodTitle": "Scan",
+      "Parameters": "N=1000",
+      "FullName": "Example.TableBenchmarks.Scan",
+      "HardwareIntrinsics": "AVX2",
+      "Memory": {
+        "Gen0Collections": 0,
+        "Gen1Collections": 0,
+        "Gen2Collections": 0,
+        "TotalOperations": 0,
+        "BytesAllocatedPerOperation": null
+      }
+    }
+  ]
+}
