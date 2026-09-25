@@ -9,12 +9,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from jsonschema import Draft202012Validator, FormatChecker
-
 from output_paths import validate_output_path
 
 from compare_evidence import compare_amplification, compare_measurement
-from validate_schema import load_json
+from validate_schema import load_json, validator_for_schema
 
 ROOT = Path(__file__).resolve().parents[1]
 COMPARISON_SCHEMA_PATH = ROOT / "schema" / "performance-comparison.schema.json"
@@ -36,9 +34,7 @@ def format_path(parts: list[Any]) -> str:
 
 
 def validate_document(path: Path, schema_path: Path, label: str) -> dict[str, Any]:
-    schema = load_json(schema_path)
-    Draft202012Validator.check_schema(schema)
-    validator = Draft202012Validator(schema, format_checker=FormatChecker())
+    validator = validator_for_schema(schema_path)
     document = load_json(path)
     errors = sorted(
         validator.iter_errors(document),
@@ -466,12 +462,7 @@ def evaluate_budget(
         "rules": rules,
     }
 
-    evaluation_schema = load_json(EVALUATION_SCHEMA_PATH)
-    Draft202012Validator.check_schema(evaluation_schema)
-    validator = Draft202012Validator(
-        evaluation_schema,
-        format_checker=FormatChecker(),
-    )
+    validator = validator_for_schema(EVALUATION_SCHEMA_PATH)
     errors = sorted(
         validator.iter_errors(evaluation),
         key=lambda error: tuple(str(part) for part in error.absolute_path),
