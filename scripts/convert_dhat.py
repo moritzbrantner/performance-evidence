@@ -32,10 +32,6 @@ def sha256_value(value: Any) -> str:
     return "sha256:" + hashlib.sha256(canonical_json(value)).hexdigest()
 
 
-def sha256_bytes(value: bytes) -> str:
-    return "sha256:" + hashlib.sha256(value).hexdigest()
-
-
 def load_json_object(path: Path) -> dict[str, Any]:
     value = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(value, dict):
