@@ -11,6 +11,8 @@ from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
 
+from output_paths import validate_output_path
+
 from compare_evidence import compare_amplification, compare_measurement
 from validate_schema import load_json
 
@@ -500,6 +502,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     try:
+        validate_output_path(args.output, (args.policy, args.comparison))
         evaluation = evaluate_budget(args.policy, args.comparison)
     except (OSError, ValueError, RuntimeError) as error:
         print(f"Performance Evidence budget evaluation failed: {error}", file=sys.stderr)
