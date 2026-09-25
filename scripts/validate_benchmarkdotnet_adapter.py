@@ -12,7 +12,7 @@ from pathlib import Path
 from jsonschema import Draft202012Validator, FormatChecker
 
 from convert_benchmarkdotnet import convert, load_json_object, sha256_bytes
-from validate_schema import validation_errors
+from schema_validation import validation_errors
 
 
 ROOT = Path(__file__).resolve().parents[1]
