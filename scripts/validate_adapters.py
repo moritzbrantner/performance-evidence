@@ -11,7 +11,7 @@ from validate_application_counters import main as validate_application_counters
 from validate_benchmarkdotnet_adapter import main as validate_benchmarkdotnet
 from validate_input_snapshots import main as validate_input_snapshots
 from validate_output_paths import main as validate_output_paths
-from validate_schema import validator_for_schema
+from schema_validation import validator_for_schema
 
 
 def main() -> int:
