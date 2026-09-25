@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from input_snapshot import InputSnapshot, read_input_snapshot
-from output_paths import validate_output_path
+from output_paths import validate_output_path, write_text_atomic
 from validate_schema import (
     SCHEMA_PATH,
     load_json_bytes,
@@ -487,15 +487,13 @@ def main() -> int:
             args.expected_candidate_revision,
             args.amplification,
         )
+        write_text_atomic(
+            args.output,
+            json.dumps(comparison, indent=2, sort_keys=True) + "\n",
+        )
     except (OSError, ValueError, RuntimeError) as error:
         print(f"Performance Evidence comparison failed: {error}", file=sys.stderr)
         return 1
-
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(
-        json.dumps(comparison, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
     print(
         f"Performance Evidence comparison written to {args.output} "
         f"({comparison['comparability']['status']})."
