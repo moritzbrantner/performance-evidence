@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from input_snapshot import read_input_snapshot
 from output_paths import validate_output_path
 from validate_schema import validation_errors, validator_for_schema
 
@@ -58,8 +59,10 @@ def nonnegative_integer(value: Any, label: str) -> int:
     return value
 
 
-def parse_dhat(path: Path) -> dict[str, Any]:
-    document = load_json_object(path)
+def parse_dhat(contents: bytes) -> dict[str, Any]:
+    document = json.loads(contents)
+    if not isinstance(document, dict):
+        raise ValueError("DHAT input must contain a JSON object")
     version = nonnegative_integer(document.get("dhatFileVersion"), "dhatFileVersion")
     if version != 2:
         raise ValueError(f"unsupported DHAT file version: {version}")
@@ -235,7 +238,8 @@ def convert(
     artifact_path: str | None = None,
 ) -> dict[str, Any]:
     validate_evidence(base_evidence, "base evidence")
-    dhat = parse_dhat(dhat_path)
+    dhat_snapshot = read_input_snapshot(dhat_path)
+    dhat = parse_dhat(dhat_snapshot.contents)
     additions = adapter_measurements(dhat)
 
     existing_names = measurement_names(base_evidence)
@@ -266,7 +270,7 @@ def convert(
         {
             "kind": "dhat",
             "path": portable_path,
-            "sha256": sha256_bytes(dhat_path.read_bytes()),
+            "sha256": dhat_snapshot.sha256,
             "media_type": DHAT_MEDIA_TYPE,
         }
     )
