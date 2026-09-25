@@ -40,8 +40,6 @@ def write_text_atomic(output: Path, contents: str) -> None:
         ) as handle:
             temporary_path = Path(handle.name)
             handle.write(contents)
-            handle.flush()
-            os.fsync(handle.fileno())
 
         os.replace(temporary_path, output)
     finally:
