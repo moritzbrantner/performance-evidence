@@ -41,6 +41,29 @@ def expect_rejected(command: list[str], protected_path: Path) -> None:
         )
 
 
+def expect_handled_output_failure(
+    command: list[str],
+    expected_message: str,
+) -> None:
+    result = subprocess.run(
+        command,
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 1:
+        raise ValueError(
+            f"output failure unexpectedly returned {result.returncode}: "
+            f"{' '.join(command)}"
+        )
+    if expected_message not in result.stderr or "Traceback" in result.stderr:
+        raise ValueError(
+            "output failure escaped the CLI error boundary: "
+            + result.stderr.strip()
+        )
+
+
 def main() -> int:
     try:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -189,6 +212,31 @@ def main() -> int:
                     "failed atomic replacement left temporary artifacts: "
                     + ", ".join(path.name for path in leftovers)
                 )
+
+            blocked_parent = temporary / "blocked-parent"
+            blocked_parent.write_text("not a directory\n", encoding="utf-8")
+            expect_handled_output_failure(
+                [
+                    sys.executable,
+                    str(ROOT / "scripts" / "compare_evidence.py"),
+                    str(ROOT / "fixtures" / "comparison" / "baseline.json"),
+                    str(ROOT / "fixtures" / "comparison" / "candidate.json"),
+                    "--output",
+                    str(blocked_parent / "comparison.json"),
+                ],
+                "Performance Evidence comparison failed:",
+            )
+            expect_handled_output_failure(
+                [
+                    sys.executable,
+                    str(ROOT / "scripts" / "evaluate_budget.py"),
+                    str(ROOT / "fixtures" / "budget" / "policy-pass.json"),
+                    str(ROOT / "fixtures" / "comparison" / "expected.json"),
+                    "--output",
+                    str(blocked_parent / "evaluation.json"),
+                ],
+                "Performance Evidence budget evaluation failed:",
+            )
     except (OSError, ValueError) as error:
         print(f"Output-path validation failed: {error}", file=sys.stderr)
         return 1
