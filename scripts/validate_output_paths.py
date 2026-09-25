@@ -9,7 +9,8 @@ import sys
 import tempfile
 from pathlib import Path
 
-from output_paths import validate_output_path
+import output_paths
+from output_paths import validate_output_path, write_text_atomic
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -156,6 +157,38 @@ def main() -> int:
                 pass
             else:
                 raise ValueError("hard-link output alias was not rejected")
+
+            atomic_output = temporary / "atomic-output.json"
+            atomic_output.write_text('{"state": "old"}\n', encoding="utf-8")
+            write_text_atomic(atomic_output, '{"state": "new"}\n')
+            if atomic_output.read_text(encoding="utf-8") != '{"state": "new"}\n':
+                raise ValueError("atomic output writer did not replace the target")
+
+            atomic_output.write_text('{"state": "stable"}\n', encoding="utf-8")
+            original_replace = output_paths.os.replace
+
+            def fail_replace(source, target):
+                raise OSError("simulated atomic replace failure")
+
+            output_paths.os.replace = fail_replace
+            try:
+                write_text_atomic(atomic_output, '{"state": "partial"}\n')
+            except OSError as error:
+                if "simulated atomic replace failure" not in str(error):
+                    raise
+            else:
+                raise ValueError("simulated atomic replace failure unexpectedly succeeded")
+            finally:
+                output_paths.os.replace = original_replace
+
+            if atomic_output.read_text(encoding="utf-8") != '{"state": "stable"}\n':
+                raise ValueError("failed atomic replacement modified the previous artifact")
+            leftovers = list(temporary.glob(f".{atomic_output.name}.*.tmp"))
+            if leftovers:
+                raise ValueError(
+                    "failed atomic replacement left temporary artifacts: "
+                    + ", ".join(path.name for path in leftovers)
+                )
     except (OSError, ValueError) as error:
         print(f"Output-path validation failed: {error}", file=sys.stderr)
         return 1
