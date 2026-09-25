@@ -3,26 +3,22 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 from pathlib import Path
 from typing import Any
 
+from input_snapshot import InputSnapshot, read_input_snapshot
 from output_paths import validate_output_path
 
 from compare_evidence import compare_amplification, compare_measurement
-from validate_schema import load_json, validator_for_schema
+from validate_schema import load_json_bytes, validator_for_schema
 
 ROOT = Path(__file__).resolve().parents[1]
 COMPARISON_SCHEMA_PATH = ROOT / "schema" / "performance-comparison.schema.json"
 POLICY_SCHEMA_PATH = ROOT / "schema" / "performance-budget-policy.schema.json"
 EVALUATION_SCHEMA_PATH = ROOT / "schema" / "performance-budget-evaluation.schema.json"
 HARD_ELIGIBLE_MEASUREMENT_TYPES = {"counter", "gauge", "size", "ratio"}
-
-
-def sha256_file(path: Path) -> str:
-    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def format_path(parts: list[Any]) -> str:
@@ -33,9 +29,14 @@ def format_path(parts: list[Any]) -> str:
     )
 
 
-def validate_document(path: Path, schema_path: Path, label: str) -> dict[str, Any]:
+def validate_document(
+    path: Path,
+    schema_path: Path,
+    label: str,
+) -> tuple[dict[str, Any], InputSnapshot]:
     validator = validator_for_schema(schema_path)
-    document = load_json(path)
+    snapshot = read_input_snapshot(path)
+    document = load_json_bytes(snapshot.contents)
     errors = sorted(
         validator.iter_errors(document),
         key=lambda error: tuple(str(part) for part in error.absolute_path),
@@ -46,7 +47,7 @@ def validate_document(path: Path, schema_path: Path, label: str) -> dict[str, An
             for error in errors
         )
         raise ValueError(f"{label} is malformed:\n  - {detail}")
-    return document
+    return document, snapshot
 
 
 def validate_policy_semantics(policy: dict[str, Any]) -> None:
@@ -365,13 +366,13 @@ def evaluate_budget(
     policy_path: Path,
     comparison_path: Path,
 ) -> dict[str, Any]:
-    policy = validate_document(
+    policy, policy_snapshot = validate_document(
         policy_path,
         POLICY_SCHEMA_PATH,
         "Performance Evidence budget policy",
     )
     validate_policy_semantics(policy)
-    comparison = validate_document(
+    comparison, comparison_snapshot = validate_document(
         comparison_path,
         COMPARISON_SCHEMA_PATH,
         "Performance Evidence comparison",
@@ -437,10 +438,10 @@ def evaluate_budget(
         "kind": "performance-evidence/budget-evaluation",
         "policy": {
             "id": policy["id"],
-            "sha256": sha256_file(policy_path),
+            "sha256": policy_snapshot.sha256,
         },
         "comparison": {
-            "sha256": sha256_file(comparison_path),
+            "sha256": comparison_snapshot.sha256,
             "candidate_evidence_hash": comparison["candidate"]["evidence_hash"],
             "candidate_source_revision": comparison["candidate"]["source_revision"],
             "baseline_evidence_hash": comparison["baseline"]["evidence_hash"],
