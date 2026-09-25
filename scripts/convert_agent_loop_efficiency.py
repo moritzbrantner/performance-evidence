@@ -13,6 +13,7 @@ from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
 
+from output_paths import write_text_atomic
 from validate_schema import validation_errors
 
 
@@ -374,9 +375,9 @@ def main() -> int:
             )
         args.output_dir.mkdir(parents=True, exist_ok=True)
         for name, evidence in converted:
-            (args.output_dir / name).write_text(
+            write_text_atomic(
+                args.output_dir / name,
                 json.dumps(evidence, indent=2, sort_keys=True) + "\n",
-                encoding="utf-8",
             )
     except (OSError, ValueError, json.JSONDecodeError) as error:
         print(f"agent-loop efficiency conversion failed: {error}", file=sys.stderr)
