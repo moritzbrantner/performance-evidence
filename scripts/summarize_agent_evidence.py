@@ -86,18 +86,17 @@ def deduplicate_documents(
 ) -> tuple[list[dict[str, Any]], list[str]]:
     unique: list[dict[str, Any]] = []
     unique_hashes: list[str] = []
-    seen: dict[tuple[str, str], bytes] = {}
+    seen: dict[tuple[str, str], str] = {}
     for document in documents:
-        encoded = canonical_json(document)
-        document_hash = sha256_bytes(encoded)
+        document_hash = sha256_bytes(canonical_json(document))
         identity = attempt_identity(document, document_hash)
         previous = seen.get(identity)
         if previous is None:
-            seen[identity] = encoded
+            seen[identity] = document_hash
             unique.append(document)
             unique_hashes.append(document_hash)
             continue
-        if previous != encoded:
+        if previous != document_hash:
             raise ValueError(
                 "conflicting evidence for the same agent attempt identity "
                 f"{identity[0]}={identity[1]!r}"
