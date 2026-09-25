@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from input_snapshot import read_input_snapshot
-from output_paths import validate_output_path
+from output_paths import validate_output_path, write_text_atomic
 from validate_schema import validation_errors, validator_for_schema
 
 
@@ -319,10 +319,9 @@ def main() -> int:
             args.callgrind,
             args.artifact_path,
         )
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(
+        write_text_atomic(
+            args.output,
             json.dumps(converted, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
         )
     except (OSError, ValueError, json.JSONDecodeError) as error:
         print(f"Rust Callgrind conversion failed: {error}", file=sys.stderr)
