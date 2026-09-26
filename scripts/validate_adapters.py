@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import sys
+
 from validate_agent_landscape import main as validate_agent_landscape
 from validate_rust_callgrind_adapter import main as validate_rust_callgrind
 from validate_dhat_adapter import main as validate_dhat
 from validate_application_counters import main as validate_application_counters
 from validate_benchmarkdotnet_adapter import main as validate_benchmarkdotnet
 from validate_output_paths import main as validate_output_paths
+from validate_schema import validator_for_schema
 
 
 def main() -> int:
@@ -17,6 +20,7 @@ def main() -> int:
     output_paths = validate_output_paths()
     if output_paths != 0:
         return output_paths
+    validator_for_schema.cache_clear()
     callgrind = validate_rust_callgrind()
     if callgrind != 0:
         return callgrind
@@ -26,7 +30,19 @@ def main() -> int:
     benchmarkdotnet = validate_benchmarkdotnet()
     if benchmarkdotnet != 0:
         return benchmarkdotnet
-    return validate_application_counters()
+    application_counters = validate_application_counters()
+    if application_counters != 0:
+        return application_counters
+
+    cache_info = validator_for_schema.cache_info()
+    if cache_info.misses != 1 or cache_info.hits < 1:
+        print(
+            "Canonical schema validator cache regression: "
+            f"expected one miss and at least one hit, got {cache_info}.",
+            file=sys.stderr,
+        )
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

@@ -10,11 +10,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from jsonschema import Draft202012Validator, FormatChecker
-
 from output_paths import validate_output_path
-
-from validate_schema import SCHEMA_PATH, load_json, validation_errors
+from validate_schema import SCHEMA_PATH, load_json, validation_errors, validator_for_schema
 
 ROOT = Path(__file__).resolve().parents[1]
 COMPARISON_SCHEMA_PATH = ROOT / "schema" / "performance-comparison.schema.json"
@@ -26,10 +23,8 @@ def sha256_file(path: Path) -> str:
 
 
 def validate_evidence(path: Path) -> dict[str, Any]:
-    schema = load_json(SCHEMA_PATH)
-    validator = Draft202012Validator(schema, format_checker=FormatChecker())
     document = load_json(path)
-    errors = validation_errors(validator, document)
+    errors = validation_errors(validator_for_schema(SCHEMA_PATH), document)
     if errors:
         raise ValueError(
             f"{path} is not valid Performance Evidence:\n  - " + "\n  - ".join(errors)
@@ -433,12 +428,7 @@ def compare_documents(
             for name, numerator, denominator in specs
         ]
 
-    comparison_schema = load_json(COMPARISON_SCHEMA_PATH)
-    Draft202012Validator.check_schema(comparison_schema)
-    validator = Draft202012Validator(
-        comparison_schema,
-        format_checker=FormatChecker(),
-    )
+    validator = validator_for_schema(COMPARISON_SCHEMA_PATH)
     errors = sorted(
         validator.iter_errors(comparison),
         key=lambda error: tuple(str(part) for part in error.absolute_path),
