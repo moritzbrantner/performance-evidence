@@ -10,10 +10,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from input_snapshot import read_input_snapshot
 from output_paths import validate_output_path
 from validate_schema import (
     SCHEMA_PATH,
     load_json,
+    load_json_bytes,
     validation_errors,
     validator_for_schema,
 )
@@ -288,7 +290,10 @@ def convert(
     artifact_path: str | None = None,
 ) -> dict[str, Any]:
     validate_evidence(base_evidence, "base evidence")
-    document = load_json_object(benchmarkdotnet_path)
+    benchmarkdotnet_snapshot = read_input_snapshot(benchmarkdotnet_path)
+    document = load_json_bytes(benchmarkdotnet_snapshot.contents)
+    if not isinstance(document, dict):
+        raise ValueError(f"{benchmarkdotnet_path} must contain a JSON object")
     benchmark = select_benchmark(document, benchmark_selector)
     additions = memory_measurements(benchmark)
 
@@ -324,7 +329,7 @@ def convert(
         {
             "kind": "benchmarkdotnet",
             "path": portable_path,
-            "sha256": sha256_bytes(benchmarkdotnet_path.read_bytes()),
+            "sha256": benchmarkdotnet_snapshot.sha256,
             "media_type": ARTIFACT_MEDIA_TYPE,
         }
     )

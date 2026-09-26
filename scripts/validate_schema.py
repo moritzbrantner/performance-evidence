@@ -38,9 +38,12 @@ def reject_json_constant(value: str) -> None:
     raise ValueError(f"invalid non-finite JSON number {value!r}")
 
 
+def load_json_bytes(contents: bytes) -> Any:
+    return json.loads(contents.decode("utf-8"), parse_constant=reject_json_constant)
+
+
 def load_json(path: Path) -> Any:
-    with path.open("r", encoding="utf-8") as handle:
-        return json.load(handle, parse_constant=reject_json_constant)
+    return load_json_bytes(path.read_bytes())
 
 
 @cache

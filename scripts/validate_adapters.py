@@ -9,6 +9,7 @@ from validate_rust_callgrind_adapter import main as validate_rust_callgrind
 from validate_dhat_adapter import main as validate_dhat
 from validate_application_counters import main as validate_application_counters
 from validate_benchmarkdotnet_adapter import main as validate_benchmarkdotnet
+from validate_input_snapshots import main as validate_input_snapshots
 from validate_output_paths import main as validate_output_paths
 from validate_schema import validator_for_schema
 
@@ -42,6 +43,10 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
+
+    input_snapshots = validate_input_snapshots()
+    if input_snapshots != 0:
+        return input_snapshots
     return 0
 
 
