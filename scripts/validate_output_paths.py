@@ -146,6 +146,26 @@ def main() -> int:
                 policy,
             )
 
+            agent_report = (
+                temporary
+                / "018f5d43-4d1c-7fd5-aed5-d451fd71c110.attempt-1.performance-evidence.json"
+            )
+            shutil.copyfile(
+                ROOT / "fixtures" / "agent-loop-efficiency" / "report.json",
+                agent_report,
+            )
+            expect_rejected(
+                [
+                    sys.executable,
+                    str(ROOT / "scripts" / "convert_agent_loop_efficiency.py"),
+                    str(agent_report),
+                    str(temporary),
+                    "--source-dirty",
+                    "false",
+                ],
+                agent_report,
+            )
+
             hardlink_source = temporary / "hardlink-source.json"
             hardlink_source.write_text('{"source": true}\n', encoding="utf-8")
             hardlink_output = temporary / "hardlink-output.json"

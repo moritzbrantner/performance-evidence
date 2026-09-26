@@ -13,6 +13,7 @@ from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
 
+from output_paths import validate_output_path
 from validate_schema import validation_errors
 
 
@@ -372,6 +373,8 @@ def main() -> int:
                 "converted evidence violates canonical contract:\n  - "
                 + "\n  - ".join(failures)
             )
+        for name, _ in converted:
+            validate_output_path(args.output_dir / name, (args.report,))
         args.output_dir.mkdir(parents=True, exist_ok=True)
         for name, evidence in converted:
             (args.output_dir / name).write_text(
