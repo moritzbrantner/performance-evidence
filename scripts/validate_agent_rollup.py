@@ -9,6 +9,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+import summarize_agent_evidence
 from summarize_agent_evidence import summarize_documents
 
 
@@ -126,8 +127,26 @@ def main() -> int:
             len(first["measurements"][group])
             for group in ("useful_work", "induced_work", "outcomes")
         )
-        thousand = summarize_documents(distinct_attempts(first, 1000))
-        two_thousand = summarize_documents(distinct_attempts(first, 2000))
+        original_canonical_json = summarize_agent_evidence.canonical_json
+        serialization_count = 0
+
+        def counted_canonical_json(value):
+            nonlocal serialization_count
+            serialization_count += 1
+            return original_canonical_json(value)
+
+        summarize_agent_evidence.canonical_json = counted_canonical_json
+        try:
+            thousand = summarize_documents(distinct_attempts(first, 1000))
+            two_thousand = summarize_documents(distinct_attempts(first, 2000))
+        finally:
+            summarize_agent_evidence.canonical_json = original_canonical_json
+
+        if serialization_count != 3000:
+            raise ValueError(
+                "rollup canonical serialization is not one-pass: "
+                f"expected 3000 serializations, got {serialization_count}"
+            )
         if thousand["work"]["measurement_entries_examined"] != entries_per_document * 1000:
             raise ValueError("1000-attempt work accounting is not one-pass")
         if two_thousand["work"]["measurement_entries_examined"] != entries_per_document * 2000:
