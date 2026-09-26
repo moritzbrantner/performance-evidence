@@ -12,6 +12,8 @@ from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
 
+from output_paths import validate_output_path
+
 from validate_schema import validation_errors
 
 
@@ -201,6 +203,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     try:
+        validate_output_path(args.output, (args.base_evidence, args.counters))
         base = load_json_object(args.base_evidence)
         fragment_bytes = args.counters.read_bytes()
         fragment = json.loads(fragment_bytes)

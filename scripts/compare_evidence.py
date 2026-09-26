@@ -12,6 +12,8 @@ from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
 
+from output_paths import validate_output_path
+
 from validate_schema import SCHEMA_PATH, load_json, validation_errors
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -479,6 +481,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     try:
+        validate_output_path(args.output, (args.baseline, args.candidate))
         comparison = compare_documents(
             args.baseline,
             args.candidate,

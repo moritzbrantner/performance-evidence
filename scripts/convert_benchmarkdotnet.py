@@ -12,6 +12,8 @@ from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
 
+from output_paths import validate_output_path
+
 from validate_schema import SCHEMA_PATH, load_json, validation_errors
 
 
@@ -351,15 +353,6 @@ def convert(
 
     validate_evidence(output, "converted evidence")
     return output
-
-
-def validate_output_path(output: Path, inputs: tuple[Path, ...]) -> None:
-    resolved_output = output.resolve()
-    for input_path in inputs:
-        if resolved_output == input_path.resolve():
-            raise ValueError(
-                f"output path must not overwrite input artifact {input_path}"
-            )
 
 
 def parse_args() -> argparse.Namespace:
