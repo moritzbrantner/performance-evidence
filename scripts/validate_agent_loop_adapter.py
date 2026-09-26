@@ -7,10 +7,8 @@ import json
 import sys
 from pathlib import Path
 
-from jsonschema import Draft202012Validator, FormatChecker
-
 from convert_agent_loop_efficiency import convert_report, repository_uri
-from validate_schema import validation_errors
+from validate_schema import validation_errors, validator_for_schema
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -179,8 +177,7 @@ def main() -> int:
         validate_malformed_telemetry_rejected(report)
         validate_attempt_identity_compatibility(report)
 
-        schema = load_json(SCHEMA_PATH)
-        validator = Draft202012Validator(schema, format_checker=FormatChecker())
+        validator = validator_for_schema(SCHEMA_PATH)
         errors = validation_errors(validator, actual)
         if errors:
             print("Converted agent-loop evidence violates canonical contract:", file=sys.stderr)

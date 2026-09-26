@@ -11,10 +11,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from jsonschema import Draft202012Validator, FormatChecker
-
 from output_paths import write_text_atomic
-from validate_schema import validation_errors
+from validate_schema import validation_errors, validator_for_schema
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -327,9 +325,7 @@ def convert_report(
 def validate_converted(
     converted: list[tuple[str, dict[str, Any]]]
 ) -> list[str]:
-    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
-    Draft202012Validator.check_schema(schema)
-    validator = Draft202012Validator(schema, format_checker=FormatChecker())
+    validator = validator_for_schema(SCHEMA_PATH)
     failures: list[str] = []
     for name, evidence in converted:
         for error in validation_errors(validator, evidence):
