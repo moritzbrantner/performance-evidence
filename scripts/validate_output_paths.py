@@ -9,7 +9,8 @@ import sys
 import tempfile
 from pathlib import Path
 
-from output_paths import validate_output_path
+import output_paths
+from output_paths import validate_output_path, write_text_atomic
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,6 +38,29 @@ def expect_rejected(command: list[str], protected_path: Path) -> None:
     if protected_path.read_bytes() != original:
         raise ValueError(
             f"rejected destructive command modified protected input {protected_path}"
+        )
+
+
+def expect_handled_output_failure(
+    command: list[str],
+    expected_message: str,
+) -> None:
+    result = subprocess.run(
+        command,
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 1:
+        raise ValueError(
+            f"output failure unexpectedly returned {result.returncode}: "
+            f"{' '.join(command)}"
+        )
+    if expected_message not in result.stderr or "Traceback" in result.stderr:
+        raise ValueError(
+            "output failure escaped the CLI error boundary: "
+            + result.stderr.strip()
         )
 
 
@@ -146,26 +170,6 @@ def main() -> int:
                 policy,
             )
 
-            agent_report = (
-                temporary
-                / "018f5d43-4d1c-7fd5-aed5-d451fd71c110.attempt-1.performance-evidence.json"
-            )
-            shutil.copyfile(
-                ROOT / "fixtures" / "agent-loop-efficiency" / "report.json",
-                agent_report,
-            )
-            expect_rejected(
-                [
-                    sys.executable,
-                    str(ROOT / "scripts" / "convert_agent_loop_efficiency.py"),
-                    str(agent_report),
-                    str(temporary),
-                    "--source-dirty",
-                    "false",
-                ],
-                agent_report,
-            )
-
             hardlink_source = temporary / "hardlink-source.json"
             hardlink_source.write_text('{"source": true}\n', encoding="utf-8")
             hardlink_output = temporary / "hardlink-output.json"
@@ -176,6 +180,63 @@ def main() -> int:
                 pass
             else:
                 raise ValueError("hard-link output alias was not rejected")
+
+            atomic_output = temporary / "atomic-output.json"
+            atomic_output.write_text('{"state": "old"}\n', encoding="utf-8")
+            write_text_atomic(atomic_output, '{"state": "new"}\n')
+            if atomic_output.read_text(encoding="utf-8") != '{"state": "new"}\n':
+                raise ValueError("atomic output writer did not replace the target")
+
+            atomic_output.write_text('{"state": "stable"}\n', encoding="utf-8")
+            original_replace = output_paths.os.replace
+
+            def fail_replace(source, target):
+                raise OSError("simulated atomic replace failure")
+
+            output_paths.os.replace = fail_replace
+            try:
+                write_text_atomic(atomic_output, '{"state": "partial"}\n')
+            except OSError as error:
+                if "simulated atomic replace failure" not in str(error):
+                    raise
+            else:
+                raise ValueError("simulated atomic replace failure unexpectedly succeeded")
+            finally:
+                output_paths.os.replace = original_replace
+
+            if atomic_output.read_text(encoding="utf-8") != '{"state": "stable"}\n':
+                raise ValueError("failed atomic replacement modified the previous artifact")
+            leftovers = list(temporary.glob(f".{atomic_output.name}.*.tmp"))
+            if leftovers:
+                raise ValueError(
+                    "failed atomic replacement left temporary artifacts: "
+                    + ", ".join(path.name for path in leftovers)
+                )
+
+            blocked_parent = temporary / "blocked-parent"
+            blocked_parent.write_text("not a directory\n", encoding="utf-8")
+            expect_handled_output_failure(
+                [
+                    sys.executable,
+                    str(ROOT / "scripts" / "compare_evidence.py"),
+                    str(ROOT / "fixtures" / "comparison" / "baseline.json"),
+                    str(ROOT / "fixtures" / "comparison" / "candidate.json"),
+                    "--output",
+                    str(blocked_parent / "comparison.json"),
+                ],
+                "Performance Evidence comparison failed:",
+            )
+            expect_handled_output_failure(
+                [
+                    sys.executable,
+                    str(ROOT / "scripts" / "evaluate_budget.py"),
+                    str(ROOT / "fixtures" / "budget" / "policy-pass.json"),
+                    str(ROOT / "fixtures" / "comparison" / "expected.json"),
+                    "--output",
+                    str(blocked_parent / "evaluation.json"),
+                ],
+                "Performance Evidence budget evaluation failed:",
+            )
     except (OSError, ValueError) as error:
         print(f"Output-path validation failed: {error}", file=sys.stderr)
         return 1

@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from input_snapshot import read_input_snapshot
-from output_paths import validate_output_path
+from output_paths import validate_output_path, write_text_atomic
 from validate_schema import (
     SCHEMA_PATH,
     load_json,
@@ -397,10 +397,9 @@ def main() -> int:
             args.benchmark,
             args.artifact_path,
         )
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(
+        write_text_atomic(
+            args.output,
             json.dumps(converted, indent=2, sort_keys=True, allow_nan=False) + "\n",
-            encoding="utf-8",
         )
     except (OSError, ValueError, json.JSONDecodeError) as error:
         print(f"BenchmarkDotNet conversion failed: {error}", file=sys.stderr)

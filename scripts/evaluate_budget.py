@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from input_snapshot import InputSnapshot, read_input_snapshot
-from output_paths import validate_output_path
+from output_paths import validate_output_path, write_text_atomic
 
 from compare_evidence import compare_amplification, compare_measurement
 from validate_schema import load_json_bytes, validator_for_schema
@@ -496,15 +496,13 @@ def main() -> int:
     try:
         validate_output_path(args.output, (args.policy, args.comparison))
         evaluation = evaluate_budget(args.policy, args.comparison)
+        write_text_atomic(
+            args.output,
+            json.dumps(evaluation, indent=2, sort_keys=True) + "\n",
+        )
     except (OSError, ValueError, RuntimeError) as error:
         print(f"Performance Evidence budget evaluation failed: {error}", file=sys.stderr)
         return 1
-
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(
-        json.dumps(evaluation, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
     print(
         f"Performance Evidence budget evaluation written to {args.output} "
         f"({evaluation['status']})."

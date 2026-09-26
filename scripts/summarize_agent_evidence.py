@@ -13,6 +13,7 @@ from typing import Any, Iterable
 
 from jsonschema import Draft202012Validator, FormatChecker
 
+from output_paths import write_text_atomic
 from validate_schema import validation_errors
 
 
@@ -311,8 +312,7 @@ def main() -> int:
         rollup = summarize_documents(documents)
         rendered = json.dumps(rollup, indent=2, sort_keys=True) + "\n"
         if args.output is not None:
-            args.output.parent.mkdir(parents=True, exist_ok=True)
-            args.output.write_text(rendered, encoding="utf-8")
+            write_text_atomic(args.output, rendered)
         sys.stdout.write(rendered)
     except (OSError, ValueError, json.JSONDecodeError) as error:
         print(f"Agent evidence rollup failed: {error}", file=sys.stderr)

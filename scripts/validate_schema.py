@@ -18,6 +18,8 @@ from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
 
+from output_paths import write_text_atomic
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / "schema" / "performance-evidence.schema.json"
@@ -427,10 +429,9 @@ def write_evidence(
             "dogfood evidence failed its own contract:\n  - " + "\n  - ".join(errors)
         )
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(
+    write_text_atomic(
+        output_path,
         json.dumps(evidence, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
     )
 
 
