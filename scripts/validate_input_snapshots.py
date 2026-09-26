@@ -10,7 +10,7 @@ from pathlib import Path
 import compare_evidence
 import convert_dhat
 import evaluate_budget
-from validate_schema import load_json_bytes
+from schema_validation import load_json_bytes
 
 
 ROOT = Path(__file__).resolve().parents[1]

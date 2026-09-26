@@ -14,7 +14,7 @@ from typing import Any
 from jsonschema import Draft202012Validator, FormatChecker
 
 from output_paths import validate_output_path, write_text_atomic
-from validate_schema import load_json, validation_errors, validator_for_schema
+from schema_validation import load_json, validation_errors, validator_for_schema
 
 
 ROOT = Path(__file__).resolve().parents[1]

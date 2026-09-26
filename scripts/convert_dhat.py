@@ -12,7 +12,7 @@ from typing import Any
 
 from input_snapshot import read_input_snapshot
 from output_paths import validate_output_path, write_text_atomic
-from validate_schema import load_json_bytes, validation_errors, validator_for_schema
+from schema_validation import load_json_bytes, validation_errors, validator_for_schema
 
 
 ROOT = Path(__file__).resolve().parents[1]
