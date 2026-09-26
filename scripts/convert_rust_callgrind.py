@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from input_snapshot import read_input_snapshot
 from output_paths import validate_output_path
 from validate_schema import validation_errors, validator_for_schema
 
@@ -43,10 +44,6 @@ def sha256_value(value: Any) -> str:
     return "sha256:" + hashlib.sha256(canonical_json(value)).hexdigest()
 
 
-def sha256_bytes(value: bytes) -> str:
-    return "sha256:" + hashlib.sha256(value).hexdigest()
-
-
 def load_json_object(path: Path) -> dict[str, Any]:
     value = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(value, dict):
@@ -70,7 +67,7 @@ def parse_nonnegative_integer(value: str, label: str) -> int:
     return parsed
 
 
-def parse_callgrind(path: Path) -> dict[str, Any]:
+def parse_callgrind(contents: bytes) -> dict[str, Any]:
     events: list[str] | None = None
     summary_values: list[int] | None = None
     creator: str | None = None
@@ -78,7 +75,7 @@ def parse_callgrind(path: Path) -> dict[str, Any]:
     calls_total = 0
     calls_directives = 0
 
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
+    for raw_line in contents.decode("utf-8").splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#"):
             continue
@@ -235,7 +232,8 @@ def convert(
     artifact_path: str | None = None,
 ) -> dict[str, Any]:
     validate_evidence(base_evidence, "base evidence")
-    parsed = parse_callgrind(callgrind_path)
+    callgrind_snapshot = read_input_snapshot(callgrind_path)
+    parsed = parse_callgrind(callgrind_snapshot.contents)
     additions, unmapped_events = adapter_measurements(parsed)
 
     existing_names = measurement_names(base_evidence)
@@ -266,7 +264,7 @@ def convert(
         {
             "kind": "callgrind",
             "path": raw_artifact_path,
-            "sha256": sha256_bytes(callgrind_path.read_bytes()),
+            "sha256": callgrind_snapshot.sha256,
             "media_type": CALLGRIND_MEDIA_TYPE,
         }
     )

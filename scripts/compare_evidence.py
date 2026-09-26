@@ -3,27 +3,31 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 import sys
 from pathlib import Path
 from typing import Any
 
+from input_snapshot import InputSnapshot, read_input_snapshot
 from output_paths import validate_output_path
-from validate_schema import SCHEMA_PATH, load_json, validation_errors, validator_for_schema
+from validate_schema import (
+    SCHEMA_PATH,
+    load_json_bytes,
+    validation_errors,
+    validator_for_schema,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 COMPARISON_SCHEMA_PATH = ROOT / "schema" / "performance-comparison.schema.json"
 MEASUREMENT_GROUPS = ("useful_work", "induced_work", "outcomes")
 
 
-def sha256_file(path: Path) -> str:
-    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def validate_evidence(path: Path) -> dict[str, Any]:
-    document = load_json(path)
+def validate_evidence(
+    path: Path,
+    snapshot: InputSnapshot,
+) -> dict[str, Any]:
+    document = load_json_bytes(snapshot.contents)
     errors = validation_errors(validator_for_schema(SCHEMA_PATH), document)
     if errors:
         raise ValueError(
@@ -32,10 +36,13 @@ def validate_evidence(path: Path) -> dict[str, Any]:
     return document
 
 
-def evidence_identity(path: Path, document: dict[str, Any]) -> dict[str, Any]:
+def evidence_identity(
+    snapshot: InputSnapshot,
+    document: dict[str, Any],
+) -> dict[str, Any]:
     workload = document["scenario"]["workload"]
     return {
-        "evidence_hash": sha256_file(path),
+        "evidence_hash": snapshot.sha256,
         "source_repository": document["source"].get("repository"),
         "source_revision": document["source"]["revision"],
         "dirty": document["source"]["dirty"],
@@ -366,10 +373,12 @@ def compare_documents(
     expected_candidate_revision: str | None = None,
     amplification_specs: list[tuple[str, str, str]] | None = None,
 ) -> dict[str, Any]:
-    baseline = validate_evidence(baseline_path)
-    candidate = validate_evidence(candidate_path)
+    baseline_snapshot = read_input_snapshot(baseline_path)
+    candidate_snapshot = read_input_snapshot(candidate_path)
+    baseline = validate_evidence(baseline_path, baseline_snapshot)
+    candidate = validate_evidence(candidate_path, candidate_snapshot)
 
-    baseline_hash = sha256_file(baseline_path)
+    baseline_hash = baseline_snapshot.sha256
     reasons = comparability_reasons(
         baseline,
         candidate,
@@ -409,8 +418,8 @@ def compare_documents(
     comparison = {
         "schema_version": "1.0.0",
         "kind": "performance-evidence/comparison",
-        "candidate": evidence_identity(candidate_path, candidate),
-        "baseline": evidence_identity(baseline_path, baseline),
+        "candidate": evidence_identity(candidate_snapshot, candidate),
+        "baseline": evidence_identity(baseline_snapshot, baseline),
         "comparability": comparability,
         "measurements": measurement_entries,
     }
