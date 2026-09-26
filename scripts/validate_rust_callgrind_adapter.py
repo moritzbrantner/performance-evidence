@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 
 from convert_rust_callgrind import convert, load_json_object
-from validate_schema import validation_errors
+from schema_validation import validation_errors
 
 from jsonschema import Draft202012Validator, FormatChecker
 
