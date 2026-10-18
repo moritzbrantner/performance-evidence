@@ -35,3 +35,14 @@ jobs:
       report_path: .artifacts/coding-tooling/fast.json
       evidence_path: .artifacts/performance-evidence/contract-validation.json
       artifact_retention_days: 14
+
+  merge-ready:
+    name: merge-ready
+    if: ${{ always() }}
+    needs: ["foundation", "findings", "contract"]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: moritzbrantner/reusable-workflows/.github/actions/merge-ready@b0f25f241d76af2584dfc9e375084ff5c5cb97da
+        with:
+          needs: ${{ toJSON(needs) }}
+          required: '["foundation", "findings", "contract"]'
